@@ -1,0 +1,40 @@
+{
+  "name": "ours — where our hours go",
+  "short_name": "ours",
+  "description": "Plan life, together. Meals, trips, goals, and budget — all shared.",
+  "id": "https://theoursapp.com/",
+  "start_url": "https://theoursapp.com/",
+  "scope": "https://theoursapp.com/",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#c39169",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Our Pantry",
+      "short_name": "Pantry",
+      "url": "/projects/Pantry/",
+      "description": "Meal planning and groceries"
+    },
+    {
+      "name": "Our Exploring",
+      "short_name": "Exploring",
+      "url": "/projects/Exploring/",
+      "description": "Trips and adventures"
+    }
+  ]
+}

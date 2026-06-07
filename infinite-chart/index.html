@@ -443,9 +443,13 @@ function undo(){if(histIdx<=0)return;histIdx--;const d=JSON.parse(history[histId
 // ── Persist ───────────────────────────────────────────────────────────────
 function autoSave(){try{localStorage.setItem('topo_draft',JSON.stringify({nodes:[...nodes.values()],conns:[...conns.values()],camera,nCount,cCount,bookmarks,ts:Date.now()}));}catch(e){}}
 function saveFile(){
-  const data={nodes:[...nodes.values()],conns:[...conns.values()],camera,nCount,cCount,bookmarks,v:2,savedAt:new Date().toISOString()};
+  const suggested='topology-'+new Date().toISOString().slice(0,10);
+  const raw=prompt('Save as (filename without .json):',suggested);
+  if(raw===null)return;
+  const name=(raw.trim()||suggested).replace(/\.json$/i,'');
+  const data={nodes:[...nodes.values()],conns:[...conns.values()],camera,nCount,cCount,bookmarks,v:2,name,savedAt:new Date().toISOString()};
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
-  a.download='topology-'+new Date().toISOString().slice(0,10)+'.json';a.click();showToast('Saved to file');
+  a.download=name+'.json';a.click();showToast('Saved to file');
 }
 
 // ── Hit testing ───────────────────────────────────────────────────────────

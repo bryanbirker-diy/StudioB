@@ -1,0 +1,24 @@
+name: Deploy Ours App
+
+on:
+  push:
+    branches: [main, FeatureA]
+    paths:
+      - 'ours/**'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy ours/ to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./ours
+          publish_branch: gh-pages
+          cname: theoursapp.com
