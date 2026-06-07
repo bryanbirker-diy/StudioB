@@ -163,24 +163,18 @@
       setLoading(true); setErr('');
       const provider = new firebase.auth.GoogleAuthProvider();
 
-      // Prefer popup — it works on desktop Chrome and iOS Safari when called
-      // synchronously from a click handler (no async/await before this call).
-      // Redirect is unreliable on iOS PWA standalone mode because ITP clears
-      // localStorage between the redirect and the return, so getRedirectResult()
-      // always comes back empty. Only fall back to redirect if popup is blocked.
+      // Always use popup — redirect is unreliable on iOS Safari (PWA standalone
+      // mode) because ITP clears localStorage between redirect and return, causing
+      // a "missing initial state" error. If the popup is blocked, tell the user
+      // rather than falling back to a broken redirect flow.
       fbAuth.signInWithPopup(provider)
         .catch(e => {
-          if (e.code === 'auth/popup-blocked') {
-            // Browser explicitly blocked the popup — fall back to redirect
-            console.warn('popup blocked, falling back to redirect');
-            return fbAuth.signInWithRedirect(provider);
-          }
-          // Any other error (cancelled, network, etc.) — show it
-          throw e;
-        })
-        .catch(e => {
           console.error('sign-in error', e);
-          setErr('Sign-in failed: ' + (e.message || e.code));
+          if (e.code === 'auth/popup-blocked') {
+            setErr('Sign-in popup was blocked. Please allow popups for this site and try again.');
+          } else {
+            setErr('Sign-in failed: ' + (e.message || e.code));
+          }
           setLoading(false);
         });
     }
