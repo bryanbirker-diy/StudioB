@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Our Exploring — ours</title>
+  <link rel="manifest" href="../../manifest.json" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../Pantry/wireframe-base.css" />
+  <style>
+    html, body { margin: 0; min-height: 100%; background: var(--paper-2); }
+    body { font-family: "Kalam", system-ui, sans-serif; color: var(--ink); }
+    * { box-sizing: border-box; }
+
+    /* reuse Pantry's input styles */
+    .text-input {
+      border: 1.5px solid var(--rule);
+      border-radius: 5px 7px 4px 6px;
+      padding: 7px 10px;
+      font-family: var(--pen);
+      font-size: 14px;
+      color: var(--ink);
+      background: rgba(255,255,255,0.55);
+      outline: none;
+      width: 100%;
+    }
+    .text-input:focus { border-color: var(--terracotta); }
+
+    .ingredient-textarea {
+      width: 100%;
+      border: 1.5px solid var(--rule);
+      border-radius: 5px 7px 4px 6px;
+      padding: 10px;
+      font-family: var(--pen); font-size: 13px;
+      color: var(--ink);
+      background: rgba(255,255,255,0.55);
+      resize: vertical; outline: none; line-height: 1.7;
+    }
+    .ingredient-textarea:focus { border-color: var(--terracotta); }
+
+    .divider-wavy {
+      height: 6px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 6'><path d='M0,3 Q5,0 10,3 T20,3 T30,3 T40,3' fill='none' stroke='%232b2620' stroke-width='1.2' stroke-linecap='round'/></svg>");
+      background-size: 40px 6px;
+      background-repeat: repeat-x;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../../firebase-config.js"></script>
+
+<!-- Shared auth layer -->
+<script type="text/babel" src="../../firebase-auth.jsx"></script>
+
+<!-- Exploring module -->
+<script src="store.js"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

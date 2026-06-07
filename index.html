@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ours — where our hours go</title>
+  <link rel="manifest" href="manifest.json" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="projects/Pantry/wireframe-base.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--paper-2); }
+    body { font-family: "Kalam", system-ui, sans-serif; color: var(--ink); }
+
+    /* ── Rail visibility ─────────────────────────────────────── */
+    .left-rail  { display: none; }
+    .right-rail { display: none; }
+
+    @media (min-width: 768px) {
+      .right-rail {
+        display: block;
+        border-left: 1.5px solid var(--rule-soft);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .left-rail {
+        display: block;
+        border-right: 1.5px solid var(--rule-soft);
+      }
+    }
+
+    /* ── Wavy divider ────────────────────────────────────────── */
+    .divider-wavy {
+      height: 6px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 6'><path d='M0,3 Q5,0 10,3 T20,3 T30,3 T40,3' fill='none' stroke='%232b2620' stroke-width='1.2' stroke-linecap='round'/></svg>");
+      background-size: 40px 6px;
+      background-repeat: repeat-x;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- Shared auth layer -->
+<script type="text/babel" src="firebase-auth.jsx"></script>
+
+<!-- Hub app -->
+<script type="text/babel" src="hub.jsx"></script>
+
+<!-- PWA service worker -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(e => console.warn('sw:', e));
+    });
+  }
+</script>
+</body>
+</html>

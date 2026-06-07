@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pantry — Meal Planning Wireframes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="wireframe-base.css" />
+
+<style>
+  html, body { margin: 0; height: 100%; background: #f0eee9; }
+  body { font-family: "Kalam", system-ui, sans-serif; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="phone-wireframes.jsx"></script>
+<script type="text/babel" src="desktop-wireframes.jsx"></script>
+
+<script type="text/babel">
+const PHONE_W = 320;
+const PHONE_H = 580;
+const DESK_W = 920;
+const DESK_H = 560;
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection
+        id="intro"
+        title="Pantry · meal-planning wireframes"
+        subtitle="b&w sketchy · earth-tone button accents · mobile + desktop pairs · 4 distinct flow directions across 6 sections"
+      >
+        <DCArtboard id="legend" label="Legend" width={420} height={PHONE_H}>
+          <div className="wf pad" style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%", overflow: "auto" }}>
+            <div className="h1 underline-sketch" style={{ display: "inline-block" }}>How to read these</div>
+            <div className="h-hand" style={{ fontSize: 17, color: "var(--ink-soft)", lineHeight: 1.15 }}>
+              Rough sketches to map the design space.<br/>
+              Style + polish come later.
+            </div>
+
+            <div className="divider-wavy" />
+
+            <div className="eyebrow">Meal slot states</div>
+            <div className="col" style={{ gap: 6 }}>
+              <div className="slot slot-filled">
+                <span className="slot-label">Filled · recipe picked</span>
+                <span className="mealname">Grilled Chicken Bowl</span>
+                <span className="mealsides">rice · broccoli · garlic sauce</span>
+              </div>
+              <div className="slot slot-eatout">
+                <span className="slot-label">Eat out</span>
+                <span className="mealname">Café down the street</span>
+                <span className="meta">→ skipped from grocery list</span>
+              </div>
+              <div className="slot slot-adhoc">
+                <span className="slot-label">Ad hoc</span>
+                <span className="mealname">winging it 🤷</span>
+                <span className="meta">→ no groceries added</span>
+              </div>
+              <div className="slot slot-empty">+ empty slot</div>
+            </div>
+
+            <div className="divider-wavy" />
+
+            <div className="eyebrow">Button colors</div>
+            <div className="row" style={{ flexWrap: "wrap", gap: 6 }}>
+              <button className="btn btn-brown btn-sm">Primary · brown</button>
+              <button className="btn btn-terracotta btn-sm">Eat out · terracotta</button>
+              <button className="btn btn-olive btn-sm">Ad hoc · olive</button>
+              <button className="btn btn-clay btn-sm">Accent · clay</button>
+              <button className="btn btn-sm">Default · b&w</button>
+            </div>
+
+            <div className="divider-wavy" />
+
+            <div className="eyebrow">Sections in this canvas</div>
+            <ol style={{ paddingLeft: 18, margin: 0, lineHeight: 1.4 }}>
+              <li>Date range entry → builds the calendar</li>
+              <li>Calendar layouts (3 directions)</li>
+              <li>Meal slot fill: recipe / eat out / ad hoc</li>
+              <li>Add Recipe flow (meal bundle)</li>
+              <li>Grocery list — pantry-aware</li>
+              <li>Pantry</li>
+            </ol>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 1 · Entry / date range ────────────────────────────── */}
+      <DCSection
+        id="entry"
+        title="1 · Pick a date range"
+        subtitle="Variable range — 3 days, a week, a month, custom. End of this step: an empty calendar."
+      >
+        <DCArtboard id="m-entry" label="Mobile" width={PHONE_W} height={PHONE_H}>
+          <M_DateRange />
+        </DCArtboard>
+        <DCArtboard id="d-entry" label="Desktop · home + range preview" width={DESK_W} height={DESK_H}>
+          <D_DateRange />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 · Calendar layouts ─────────────────────────────── */}
+      <DCSection
+        id="calendar"
+        title="2 · Calendar layouts"
+        subtitle="Three directions: a week-grid (dense, desktop-native), a 7-col day-stack (also fits short ranges), and a long scroll list (mobile-first)."
+      >
+        <DCArtboard id="d-cal-grid" label="A · Week Grid · desktop" width={DESK_W} height={DESK_H}>
+          <D_CalendarGrid />
+        </DCArtboard>
+        <DCArtboard id="d-cal-stack" label="B · 7-col Day Stack · desktop" width={DESK_W} height={DESK_H}>
+          <D_CalendarStack />
+        </DCArtboard>
+        <DCArtboard id="m-cal-stack" label="A/B · Day Stack · mobile" width={PHONE_W} height={PHONE_H}>
+          <M_CalendarStack />
+        </DCArtboard>
+        <DCArtboard id="m-cal-list" label="C · Compact list · mobile" width={PHONE_W} height={PHONE_H}>
+          <M_CalendarList />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 · Slot fill ────────────────────────────────────── */}
+      <DCSection
+        id="slot"
+        title="3 · Filling a meal slot"
+        subtitle="Same three choices on both: pick a recipe (curated library), eat out, or ad hoc. Last two short-circuit grocery generation."
+      >
+        <DCArtboard id="m-slot" label="Mobile · bottom sheet" width={PHONE_W} height={PHONE_H}>
+          <M_SlotFill />
+        </DCArtboard>
+        <DCArtboard id="d-slot" label="Desktop · right panel" width={DESK_W} height={DESK_H}>
+          <D_SlotFill />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 · Add Recipe ───────────────────────────────────── */}
+      <DCSection
+        id="recipe"
+        title="4 · Add Recipe — meal bundle"
+        subtitle="Main + sides + flat ingredient list. Top-right '+Recipe' lives on every page. Mobile = stepped wizard, desktop = all-in-one with live preview."
+      >
+        <DCArtboard id="m-r1" label="Mobile · Step 1: meal" width={PHONE_W} height={PHONE_H}>
+          <M_RecipeStep1 />
+        </DCArtboard>
+        <DCArtboard id="m-r2" label="Mobile · Step 2: ingredients" width={PHONE_W} height={PHONE_H}>
+          <M_RecipeStep2 />
+        </DCArtboard>
+        <DCArtboard id="d-recipe" label="Desktop · single screen + preview" width={DESK_W} height={DESK_H}>
+          <D_AddRecipe />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 5 · Grocery list ─────────────────────────────────── */}
+      <DCSection
+        id="grocery"
+        title="5 · The grocery list (the endgame)"
+        subtitle="Auto-generated from filled slots. Pantry-aware — items you already have are scribbled out, with a 'why' rationale on desktop."
+      >
+        <DCArtboard id="m-list" label="Mobile · buy / skip" width={PHONE_W} height={PHONE_H}>
+          <M_Grocery />
+        </DCArtboard>
+        <DCArtboard id="d-list" label="Desktop · two columns + summary" width={DESK_W} height={DESK_H}>
+          <D_Grocery />
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 6 · Pantry ───────────────────────────────────────── */}
+      <DCSection
+        id="pantry"
+        title="6 · Pantry — what you already have"
+        subtitle="Simple item list, grouped by where it lives. No quantities tracked — just presence, used to skip groceries."
+      >
+        <DCArtboard id="m-pantry" label="Mobile · chips by group" width={PHONE_W} height={PHONE_H}>
+          <M_Pantry />
+        </DCArtboard>
+        <DCArtboard id="d-pantry" label="Desktop · 4-up grid" width={DESK_W} height={DESK_H}>
+          <D_Pantry />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
