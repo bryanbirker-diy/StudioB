@@ -1526,7 +1526,7 @@ function App() {
   function handleStartPlan(start, end, cancel = false) {
     if (cancel) { setNewPlanMode(false); return; }
     updatePlan({ start_date: start, end_date: end, slots: buildSlots(start, end) });
-    updatePantry({ ...pantry, onHand: [] }); // clear on-hand when plan resets
+    updatePantry({ ...pantry, onHand: [], extras: [] }); // clear on-hand and extras when plan resets
     setNewPlanMode(false);
     setView('plan');
   }
