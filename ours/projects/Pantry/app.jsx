@@ -4,7 +4,7 @@
 const { AuthProvider: PantryAuthProvider, useAuth: usePantryAuth } = window._oursAuth;
 
 // ── TopBar ────────────────────────────────────────────────────
-function TopBar({ onAddRecipe }) {
+function TopBar({ onOpenRecipes }) {
   return (
     <header className="app-topbar">
       <a href="../../" style={{
@@ -17,8 +17,8 @@ function TopBar({ onAddRecipe }) {
         <span className="brand-mark" />
         Our Pantry
       </div>
-      <button className="btn btn-clay btn-sm" onClick={onAddRecipe} style={{ flexShrink: 0 }}>
-        ＋ Recipe
+      <button className="btn btn-clay btn-sm" onClick={onOpenRecipes} style={{ flexShrink: 0 }}>
+        Recipes 🍲
       </button>
     </header>
   );
@@ -27,10 +27,34 @@ function TopBar({ onAddRecipe }) {
 // ── BottomNav (pill style) ────────────────────────────────────
 const TABS = [
   { id: 'plan',    label: 'Plan',    icon: '📅' },
-  { id: 'recipes', label: 'Recipe',  icon: '🍲' },
   { id: 'grocery', label: 'Grocery', icon: '🛒' },
   { id: 'pantry',  label: 'Pantry',  icon: '🌿' },
+  { id: 'prepare', label: 'Prepare', icon: '✅' },
 ];
+
+// ── WorkflowBreadcrumb ─────────────────────────────────────────
+const WORKFLOW_STEPS  = ['plan', 'grocery', 'pantry', 'prepare'];
+const WORKFLOW_LABELS = { plan: 'Plan', grocery: 'Grocery', pantry: 'Pantry', prepare: 'Prepare' };
+
+function WorkflowBreadcrumb({ current }) {
+  const idx = WORKFLOW_STEPS.indexOf(current);
+  if (idx === -1) return null;
+  return (
+    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.08em',
+      color: 'var(--ink-fade)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 16 }}>
+      {WORKFLOW_STEPS.map((step, i) => (
+        <React.Fragment key={step}>
+          {i > 0 && <span style={{ opacity: 0.4 }}>›</span>}
+          <span style={{
+            color: i === idx ? 'var(--clay)' : i < idx ? 'var(--ink-soft)' : 'var(--ink-fade)',
+            fontWeight: i === idx ? 700 : 400,
+            textTransform: 'uppercase',
+          }}>{WORKFLOW_LABELS[step]}</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
 
 function BottomNav({ view, setView }) {
   return (
@@ -551,6 +575,7 @@ function PlanCalendar({ plan, recipes, onUpdatePlan, onNewPlan, onNavigate }) {
 
   return (
     <div className="page">
+      <WorkflowBreadcrumb current="plan" />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10,
         justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
@@ -561,7 +586,7 @@ function PlanCalendar({ plan, recipes, onUpdatePlan, onNewPlan, onNavigate }) {
         </div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-sm btn-olive" onClick={() => setConfirmNewPlan(true)}>Start new plan</button>
-          <button className="btn btn-sm btn-brown" onClick={() => onNavigate('grocery')}>Grocery list →</button>
+          <button className="btn btn-sm btn-brown" onClick={() => onNavigate('grocery')}>Proceed to Grocery →</button>
         </div>
       </div>
 
@@ -994,9 +1019,8 @@ function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport }) {
 }
 
 // ── GroceryList ───────────────────────────────────────────────
-function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemoveExtra }) {
+function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemoveExtra, onNavigate }) {
   const [extraInput, setExtraInput] = React.useState('');
-  const [copyLabel,  setCopyLabel]  = React.useState('Prepare list');
 
   // onHand items are displayed at component level; generateGroceryList only filters staples
   const items = React.useMemo(
@@ -1011,25 +1035,6 @@ function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemo
 
   const needToBuy   = items.filter(i => !onHandSet.has(i.name.toLowerCase()));
   const alreadyHave = items.filter(i =>  onHandSet.has(i.name.toLowerCase()));
-
-  async function copyToClipboard() {
-    if (!needToBuy.length) return;
-    const text = needToBuy.map(i => i.name).join('\n');
-    setCopyLabel('📋 Ready to paste!');
-    setTimeout(() => setCopyLabel('Prepare list'), 2500);
-    try { await navigator.clipboard.writeText(text); }
-    catch {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
-        document.body.appendChild(ta);
-        ta.focus(); ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      } catch { /* silent */ }
-    }
-  }
 
   function handleAddExtra() {
     const v = extraInput.trim();
@@ -1088,6 +1093,7 @@ function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemo
 
   return (
     <div className="page">
+      <WorkflowBreadcrumb current="grocery" />
       <div className="spread" style={{ marginBottom: 4 }}>
         <div>
           <div className="h2">Grocery List</div>
@@ -1095,17 +1101,9 @@ function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemo
             {formatDate(plan.start_date)} – {formatDate(plan.end_date)} · {numDays} day{numDays !== 1 ? 's' : ''} · {needToBuy.length} to buy
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-          <button className="btn btn-sm" onClick={copyToClipboard}
-            style={{ opacity: needToBuy.length ? 1 : 0.4 }}>
-            {copyLabel}
-          </button>
-          <a href="https://shoppinglist.google.com" target="_blank" rel="noopener noreferrer"
-            className="btn btn-sm"
-            style={{ textDecoration: 'none' }}>
-            🛒 Open Shopping List
-          </a>
-        </div>
+        <button className="btn btn-sm btn-brown" onClick={() => onNavigate('pantry')}>
+          Proceed to Pantry →
+        </button>
       </div>
 
       {staplesCount > 0 && (
@@ -1117,7 +1115,7 @@ function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemo
       )}
 
       <div style={{ fontSize: 12, color: 'var(--brown)', fontFamily: 'var(--mono)', marginTop: 8, marginBottom: 6 }}>
-        Tap to mark as already have · copy the rest to your shopping app.
+        Tap any item to mark it as already on hand — it'll be crossed off your list. Add extras below.
       </div>
 
       <div className="divider-wavy" style={{ margin: '8px 0 14px' }} />
@@ -1190,9 +1188,10 @@ function SectionInput({ value, onChange, onSubmit, placeholder }) {
 }
 
 // ── PantryTab ─────────────────────────────────────────────────
-function PantryTab({ pantry, onUpdatePantry }) {
+function PantryTab({ pantry, onUpdatePantry, onNavigate }) {
   const [staplesInput, setStaplesInput] = React.useState('');
   const [onHandInput,  setOnHandInput]  = React.useState('');
+  const [extrasInput,  setExtrasInput]  = React.useState('');
 
   const staples = pantry.staples || [];
   const onHand  = pantry.onHand  || [];
@@ -1229,8 +1228,24 @@ function PantryTab({ pantry, onUpdatePantry }) {
     [pantry.extras]
   );
 
+  function addExtra() {
+    const trimmed = extrasInput.trim();
+    if (!trimmed) return;
+    const current = pantry.extras || [];
+    if (current.some(i => i.toLowerCase() === trimmed.toLowerCase())) { setExtrasInput(''); return; }
+    onUpdatePantry({ ...pantry, extras: [...current, trimmed] });
+    setExtrasInput('');
+  }
+
+  function removeExtra(item) {
+    onUpdatePantry({ ...pantry, extras: (pantry.extras || []).filter(i => i !== item) });
+  }
+
+  const extras = pantry.extras || [];
+
   return (
     <div className="page">
+      <WorkflowBreadcrumb current="pantry" />
       <div className="h2" style={{ marginBottom: 4 }}>Pantry</div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', marginBottom: 20, lineHeight: 1.6 }}>
         Staples are always excluded from your grocery list. On Hand tracks what you currently have — check items off your grocery list to fill it automatically.
@@ -1324,6 +1339,108 @@ function PantryTab({ pantry, onUpdatePantry }) {
           onSubmit={() => addToList('onHand', onHandInput, setOnHandInput)}
           placeholder="Add something you have on hand…" />
       </div>
+
+      {/* Extras — one-off items for the grocery list */}
+      <div className="pantry-section">
+        <div className="pantry-section-header">
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 17 }}>🛒</span>
+              <span className="h3" style={{ fontSize: 17 }}>Add to this list</span>
+              {extras.length > 0 && <span className="eyebrow" style={{ opacity: 0.65, marginLeft: 2 }}>{extras.length}</span>}
+            </div>
+            <div className="note" style={{ marginTop: 2 }}>One-off items to add to your grocery list this time</div>
+          </div>
+        </div>
+        <div>
+          {extras.length === 0 && (
+            <div className="note" style={{ padding: '10px 14px', fontStyle: 'italic' }}>
+              Nothing added yet. Paper towels, a birthday card…
+            </div>
+          )}
+          {extras.map(item => (
+            <div key={item} className="pantry-item">
+              <span style={{ flex: 1, fontSize: 14 }}>{item}</span>
+              <button onClick={() => removeExtra(item)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--ink-fade)', fontSize: 15, padding: '2px 6px', lineHeight: 1 }}>✕</button>
+            </div>
+          ))}
+        </div>
+        <SectionInput
+          value={extrasInput} onChange={setExtrasInput}
+          onSubmit={addExtra}
+          placeholder="Paper towels, dog food…" />
+      </div>
+
+      <button className="btn btn-clay" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
+        onClick={() => onNavigate('prepare')}>
+        Proceed to Prepare →
+      </button>
+    </div>
+  );
+}
+
+// ── PrepareTab ────────────────────────────────────────────────
+function PrepareTab({ plan, recipes, pantry }) {
+  const [copyLabel, setCopyLabel] = React.useState('📋 Copy grocery list');
+
+  const onHandSet = React.useMemo(
+    () => new Set((pantry?.onHand || []).map(s => s.trim().toLowerCase())),
+    [pantry]
+  );
+  const items = React.useMemo(
+    () => plan ? generateGroceryList(plan, recipes, pantry) : [],
+    [plan, recipes, pantry]
+  );
+  const needToBuy = items.filter(i => !onHandSet.has(i.name.toLowerCase()));
+
+  async function copyToClipboard() {
+    if (!needToBuy.length) return;
+    const text = needToBuy.map(i => i.name).join('\n');
+    setCopyLabel('✓ Copied!');
+    setTimeout(() => setCopyLabel('📋 Copy grocery list'), 2500);
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      } catch { /* silent */ }
+    }
+  }
+
+  return (
+    <div className="page">
+      <WorkflowBreadcrumb current="prepare" />
+      <div className="h2" style={{ marginBottom: 6 }}>Prepare</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', marginBottom: 28, lineHeight: 1.6 }}>
+        You're ready to shop. Copy your list and open your shopping app.
+      </div>
+      <div className="col" style={{ gap: 10 }}>
+        <button className="btn btn-clay btn-lg"
+          style={{ width: '100%', justifyContent: 'center', opacity: needToBuy.length ? 1 : 0.4 }}
+          onClick={copyToClipboard}>
+          {copyLabel}
+        </button>
+        <a href="https://shoppinglist.google.com" target="_blank" rel="noopener noreferrer"
+          className="btn btn-lg"
+          style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
+          🛒 Open Shopping List
+        </a>
+      </div>
+      {needToBuy.length > 0 && (
+        <div style={{ marginTop: 20, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)' }}>
+          {needToBuy.length} item{needToBuy.length !== 1 ? 's' : ''} ready to copy
+        </div>
+      )}
+      {!plan && (
+        <div className="note" style={{ marginTop: 20, textAlign: 'center' }}>
+          No plan yet — start a plan to generate a grocery list.
+        </div>
+      )}
     </div>
   );
 }
@@ -1418,7 +1535,7 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--paper-2)', fontFamily: 'var(--pen)', color: 'var(--ink)' }}>
-      <TopBar onAddRecipe={() => openRecipeForm(null)} />
+      <TopBar onOpenRecipes={() => setView('recipes')} />
 
       {showDatePicker && (
         <DateRangePicker existingPlan={plan} onStart={handleStartPlan} />
@@ -1443,10 +1560,14 @@ function App() {
         <GroceryList plan={plan} recipes={recipes} pantry={pantry}
           onToggleOnHand={handleToggleOnHand}
           onAddExtra={handleAddExtra}
-          onRemoveExtra={handleRemoveExtra} />
+          onRemoveExtra={handleRemoveExtra}
+          onNavigate={setView} />
       )}
       {view === 'pantry' && (
-        <PantryTab pantry={pantry} onUpdatePantry={updatePantry} />
+        <PantryTab pantry={pantry} onUpdatePantry={updatePantry} onNavigate={setView} />
+      )}
+      {view === 'prepare' && (
+        <PrepareTab plan={plan} recipes={recipes} pantry={pantry} />
       )}
 
       <BottomNav view={view} setView={v => { setView(v); setNewPlanMode(false); }} />

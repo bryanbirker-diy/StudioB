@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "pantry",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["ours/projects/Pantry/serve.js"],
+      "port": 3400
+    },
+    {
       "name": "infinite-chart",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "infinite-chart", "-p", "5500", "--no-clipboard"],
