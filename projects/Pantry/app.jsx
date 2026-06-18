@@ -18,7 +18,7 @@ function TopBar({ onOpenRecipes }) {
         Our Pantry
       </div>
       <button className="btn btn-clay btn-sm" onClick={onOpenRecipes} style={{ flexShrink: 0 }}>
-        Recipes 🍲
+        Manage Recipes
       </button>
     </header>
   );
@@ -824,7 +824,7 @@ const TYPE_BADGE = {
   party_trick: { label: '🎉 Party Trick', cls: 'chip chip-olive' },
 };
 
-function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport }) {
+function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport, onBack }) {
   const [confirmId,     setConfirmId]     = React.useState(null);
   const [importPreview, setImportPreview] = React.useState(null);
   const [search,        setSearch]        = React.useState('');
@@ -895,6 +895,7 @@ function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport }) {
     <div className="page">
       <div className="spread" style={{ marginBottom: 10 }}>
         <div>
+          <button className="btn btn-sm btn-ghost" onClick={onBack} style={{ marginBottom: 6, padding: '2px 10px' }}>← Back</button>
           <div className="h2">Recipes</div>
           {recipes.length > 0 && <div className="note">{filtered.length} of {recipes.length}</div>}
         </div>
@@ -1548,6 +1549,7 @@ function App() {
       )}
       {view === 'recipes' && (
         <RecipeList recipes={recipes}
+          onBack={() => setView('plan')}
           onAdd={() => openRecipeForm(null)}
           onEdit={openRecipeForm}
           onDelete={handleDeleteRecipe}
