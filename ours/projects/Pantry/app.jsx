@@ -1247,10 +1247,18 @@ function PantryTab({ pantry, onUpdatePantry, onNavigate }) {
   return (
     <div className="page">
       <WorkflowBreadcrumb current="pantry" />
-      <div className="h2" style={{ marginBottom: 4 }}>Pantry</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', marginBottom: 20, lineHeight: 1.6 }}>
-        Staples are always excluded from your grocery list. On Hand tracks what you currently have — check items off your grocery list to fill it automatically.
+      <div className="spread" style={{ marginBottom: 4, alignItems: 'flex-start' }}>
+        <div>
+          <div className="h2">Pantry</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, lineHeight: 1.6, maxWidth: 340 }}>
+            Staples are always excluded from your grocery list. On Hand tracks what you currently have.
+          </div>
+        </div>
+        <button className="btn btn-sm btn-brown" onClick={() => onNavigate('prepare')} style={{ flexShrink: 0 }}>
+          Proceed to Prepare →
+        </button>
       </div>
+      <div style={{ marginBottom: 20 }} />
 
       {/* Staples */}
       <div className="pantry-section">
@@ -1374,10 +1382,6 @@ function PantryTab({ pantry, onUpdatePantry, onNavigate }) {
           placeholder="Paper towels, dog food…" />
       </div>
 
-      <button className="btn btn-clay" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
-        onClick={() => onNavigate('prepare')}>
-        Proceed to Prepare →
-      </button>
     </div>
   );
 }
