@@ -303,8 +303,7 @@ function SlotSheet({ slot, recipes, plan, onAssign, onClose }) {
   const outLabelRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (mode === 'pick-recipe' && searchRef.current)   searchRef.current.focus();
-    if (mode === 'going-out'   && outLabelRef.current) outLabelRef.current.focus();
+    if (mode === 'going-out' && outLabelRef.current) outLabelRef.current.focus();
   }, [mode]);
 
   // Smart sort: ingredient overlap with already-planned meals
