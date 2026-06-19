@@ -12,11 +12,17 @@
 
   <link rel="stylesheet" href="wireframe-base.css" />
   <style>
-    html, body {
+    html {
       margin: 0; min-height: 100%; background: var(--paper-2);
-      overflow-x: hidden; /* prevent horizontal overflow on iOS */
+      overflow-x: clip; /* clip is stricter than hidden — prevents iOS scroll-bleed */
     }
-    body { font-family: "Kalam", system-ui, sans-serif; color: var(--ink); }
+    body {
+      margin: 0; min-height: 100%; background: var(--paper-2);
+      overflow-x: hidden;
+      /* prevent rubber-band horizontal scroll on iOS */
+      overscroll-behavior-x: none;
+      font-family: "Kalam", system-ui, sans-serif; color: var(--ink);
+    }
     * { box-sizing: border-box; }
 
     /* ── Top bar ─────────────────────────────────────────────── */
@@ -76,6 +82,7 @@
       backdrop-filter: blur(4px);
       display: flex; align-items: flex-end; justify-content: center;
       padding: 0;
+      overscroll-behavior: none; /* prevent scroll bleed to page behind */
     }
     @media (min-width: 560px) {
       .modal-backdrop { align-items: center; padding: 20px; }
@@ -84,10 +91,18 @@
       background: var(--paper);
       border-radius: 18px 18px 4px 4px;
       padding: 20px 18px;
+      /* safe-area padding so content clears home indicator */
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
       width: 100%;
       max-width: 500px;
-      max-height: 92vh;
+      /* dvh = dynamic viewport height — shrinks when keyboard appears on iOS */
+      max-height: 85dvh;
+      max-height: 85vh; /* fallback for older Safari */
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    @supports (max-height: 85dvh) {
+      .modal-sheet { max-height: 85dvh; }
     }
     @media (min-width: 560px) {
       .modal-sheet { border-radius: 12px; }
