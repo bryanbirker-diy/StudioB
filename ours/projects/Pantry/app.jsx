@@ -302,9 +302,8 @@ function SlotSheet({ slot, recipes, plan, onAssign, onClose }) {
   const searchRef   = React.useRef(null);
   const outLabelRef = React.useRef(null);
 
-  React.useEffect(() => {
-    if (mode === 'going-out' && outLabelRef.current) outLabelRef.current.focus();
-  }, [mode]);
+  // No auto-focus on any mode — let the user tap to open the keyboard
+
 
   // Smart sort: ingredient overlap with already-planned meals
   const planIngredients = React.useMemo(() => {
@@ -348,9 +347,9 @@ function SlotSheet({ slot, recipes, plan, onAssign, onClose }) {
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
 
         {/* Shared header — ✕ always right; ← back below it in going-out mode */}
-        <div className="spread" style={{ marginBottom: 4 }}>
-          <span className="eyebrow">{formatDate(slot.date)} · {MEAL_FULL[slot.meal_type]}</span>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
+          <span className="eyebrow" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingTop: 4 }}>{formatDate(slot.date)} · {MEAL_FULL[slot.meal_type]}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
             <button className="btn btn-sm btn-ghost" onClick={onClose}
               style={{ padding: '0 8px', fontSize: 16 }}>✕</button>
             {mode === 'going-out' && (
