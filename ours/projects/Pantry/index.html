@@ -94,10 +94,11 @@
       /* safe-area padding so content clears home indicator */
       padding-bottom: max(20px, env(safe-area-inset-bottom));
       width: 100%;
-      max-width: 500px;
+      /* never wider than the actual screen */
+      max-width: min(500px, 100vw);
+      box-sizing: border-box;
       /* dvh = dynamic viewport height — shrinks when keyboard appears on iOS */
-      max-height: 85dvh;
-      max-height: 85vh; /* fallback for older Safari */
+      max-height: 85vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
