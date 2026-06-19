@@ -456,7 +456,7 @@ function SlotSheet({ slot, recipes, plan, onAssign, onClose }) {
               </div>
             )}
 
-            <div className="col" style={{ gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+            <div className="col" style={{ gap: 6, maxHeight: 'min(300px, 40dvh)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
               {filtered.length === 0 && (
                 <div className="note" style={{ textAlign: 'center', padding: '24px 0' }}>
                   {recipes.filter(r => (r.type || 'meal') === typeFilter).length === 0
