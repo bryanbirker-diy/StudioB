@@ -76,8 +76,19 @@
     }
 
     /* ── Modal ───────────────────────────────────────────────── */
+    /* Anchored to the *visual* viewport (see visual-viewport.js) so the
+       sheet stays above the iOS soft keyboard instead of being pushed
+       off the top of the screen. Falls back to the layout viewport when
+       the visualViewport API / CSS vars are unavailable. */
     .modal-backdrop {
-      position: fixed; inset: 0; z-index: 200;
+      position: fixed;
+      top: 0; left: 0;
+      width: var(--vvw, 100vw);
+      height: var(--vvh, 100vh);
+      /* shift to track the visible region when iOS scrolls the layout
+         viewport up to reveal a focused input */
+      transform: translate(var(--vvl, 0px), var(--vvt, 0px));
+      z-index: 200;
       background: rgba(24,20,16,.48);
       backdrop-filter: blur(4px);
       display: flex; align-items: flex-end; justify-content: center;
@@ -98,13 +109,11 @@
       max-width: min(500px, 100vw);
       box-sizing: border-box;
       overflow-x: hidden;
-      /* dvh = dynamic viewport height — shrinks when keyboard appears on iOS */
-      max-height: 85vh;
+      /* backdrop is already the visual-viewport height; cap the sheet just
+         under it so a sliver of backdrop shows above */
+      max-height: 100%;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-    }
-    @supports (max-height: 85dvh) {
-      .modal-sheet { max-height: 85dvh; }
     }
     @media (min-width: 560px) {
       .modal-sheet { border-radius: 12px; }
@@ -263,6 +272,9 @@
 </head>
 <body>
 <div id="root"></div>
+
+<!-- Platform-wide iOS keyboard / visual-viewport fix (must run before render) -->
+<script src="../../visual-viewport.js"></script>
 
 <!-- React + Babel -->
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>

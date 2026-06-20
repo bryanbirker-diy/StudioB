@@ -8,6 +8,12 @@
       "port": 3400
     },
     {
+      "name": "ours",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "ours", "-p", "5600", "--no-clipboard"],
+      "port": 5600
+    },
+    {
       "name": "infinite-chart",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "infinite-chart", "-p", "5500", "--no-clipboard"],
