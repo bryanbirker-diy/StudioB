@@ -1,7 +1,10 @@
 // sw.js — ours service worker
 // Minimal: caches app shell for offline support + enables PWA install prompt.
 
-const CACHE = 'ours-v2';
+// Bump this on every deploy that changes a same-origin file. Because the fetch
+// handler is cache-first, returning PWA users only pick up new code when the
+// cache name changes (the activate handler then deletes the old cache).
+const CACHE = 'ours-v3';
 
 // Files to pre-cache (app shell)
 const PRECACHE = [
@@ -10,6 +13,7 @@ const PRECACHE = [
   '/hub.jsx',
   '/firebase-config.js',
   '/firebase-auth.jsx',
+  '/visual-viewport.js',
   '/projects/Pantry/wireframe-base.css',
   '/projects/Pantry/',
   '/projects/Pantry/index.html',
@@ -19,6 +23,14 @@ const PRECACHE = [
   '/projects/Exploring/index.html',
   '/projects/Exploring/store.js',
   '/projects/Exploring/app.jsx',
+  '/projects/Home/',
+  '/projects/Home/index.html',
+  '/projects/Home/store.js',
+  '/projects/Home/app.jsx',
+  '/projects/Money/',
+  '/projects/Money/index.html',
+  '/projects/Money/store.js',
+  '/projects/Money/app.jsx',
 ];
 
 // Install: pre-cache app shell
