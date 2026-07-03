@@ -215,7 +215,7 @@
 
         <div style={{ textAlign: 'center', position: 'relative' }}>
           <div style={{
-            fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12,
+            fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12,
             letterSpacing: '0.22em', textTransform: 'uppercase',
             color: 'var(--accent)', marginBottom: 16,
           }}>Plan life, together</div>
@@ -277,7 +277,7 @@
         padding: '40px 24px', textAlign: 'center', gap: 18,
       }}>
         <div style={{
-          fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12,
+          fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12,
           letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent)',
         }}>Access restricted</div>
         <h2 style={{
@@ -400,7 +400,7 @@
             textTransform: 'uppercase', lineHeight: 0.92,
           }}>Ours<span style={{ color: 'var(--accent)' }}>.</span></div>
           <div style={{
-            fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11,
+            fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11,
             letterSpacing: '0.18em', textTransform: 'uppercase',
             color: 'var(--ink-2)', marginTop: 10,
           }}>Hi {firstName} — one more step</div>
@@ -420,7 +420,7 @@
                 color: 'var(--ink-soft)', cursor: 'pointer', textAlign: 'left',
                 boxShadow: 'none',
               }}>
-                <div style={{ fontWeight: 800, marginBottom: 4, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.02em', fontSize: 13 }}>{title}</div>
+                <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.02em', fontSize: 13 }}>{title}</div>
                 <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>{sub}</div>
               </button>
             ))}
@@ -508,7 +508,7 @@
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
-            fontFamily: 'var(--sans)', fontSize: 18, fontWeight: 900,
+            fontFamily: 'var(--sans)', fontSize: 18, fontWeight: 800,
             color: 'var(--navy)', letterSpacing: '0.18em',
           }}>{household.inviteCode}</span>
           <button onClick={copy} style={{
@@ -525,6 +525,27 @@
     );
   }
 
+  // ─── Local dev bypass ───────────────────────────────────────────────────────
+  // Lets a developer preview the suite without Google sign-in. Hard-gated:
+  // only on localhost AND only when explicitly opted in (?dev=1, which persists
+  // via localStorage). Never runs in production. Turn off with ?dev=0.
+  function devBypass() {
+    const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+    if (!isLocal) return null;
+    const params = new URLSearchParams(location.search);
+    if (params.get('dev') === '0') { localStorage.removeItem('ours_dev_bypass'); return null; }
+    if (params.get('dev') === '1') localStorage.setItem('ours_dev_bypass', '1');
+    if (localStorage.getItem('ours_dev_bypass') !== '1') return null;
+    return {
+      user: { uid: 'dev-user', displayName: 'Dev Preview', email: 'dev@localhost', photoURL: '' },
+      household: {
+        id: 'dev-household', name: 'The Preview Household', inviteCode: 'DEV123',
+        memberUids: ['dev-user'],
+        memberProfiles: { 'dev-user': { displayName: 'Dev Preview' } },
+      },
+    };
+  }
+
   // ─── AuthProvider ──────────────────────────────────────────────────────────
 
   function AuthProvider({ children }) {
@@ -536,6 +557,16 @@
     const blockedEmailRef = useRef(null);
 
     useEffect(() => {
+      // Local dev bypass — skip Firebase entirely when opted in on localhost.
+      const bypass = devBypass();
+      if (bypass) {
+        console.warn('ours: DEV BYPASS active — no real auth');
+        setUser(bypass.user);
+        setHousehold(bypass.household);
+        setPhase('ready');
+        return;
+      }
+
       setLoadStatus('Checking sign-in…');
 
       // Process any pending redirect result first, THEN listen for auth state

@@ -208,7 +208,7 @@ function ProductCard({ product, index, stats, onClick }) {
 
       <div style={{ minWidth: 0 }}>
         <div style={{
-          fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 17,
+          fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 17,
           color: 'var(--navy)', lineHeight: 1.1,
           textTransform: 'uppercase', letterSpacing: '-0.01em',
         }}>
@@ -366,7 +366,7 @@ function LeftRail({ activeProduct, household, user }) {
 
       {/* Suite nav */}
       <div>
-        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
           The Suite
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -388,7 +388,7 @@ function LeftRail({ activeProduct, household, user }) {
                 width: 24, height: 24, borderRadius: 0,
                 background: p.color, border: `1px solid ${p.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fdf9f0', fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 12,
+                color: '#fdf9f0', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12,
                 flexShrink: 0,
               }}>
                 {p.letter}
@@ -409,7 +409,7 @@ function LeftRail({ activeProduct, household, user }) {
 
       {/* Household */}
       <div>
-        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
           {household?.name || 'Household'}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -482,7 +482,7 @@ function RightRail({ stats }) {
         padding: '14px 16px',
         background: 'rgba(255,255,255,0.45)',
       }}>
-        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
           This week, at a glance
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -506,7 +506,7 @@ function RightRail({ stats }) {
         padding: '14px 16px',
         background: 'transparent',
       }}>
-        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
           The Suite
         </div>
         <div style={{ fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
@@ -552,7 +552,7 @@ function SettingsView({ user, household }) {
 
       {/* Page heading */}
       <div>
-        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 5 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 5 }}>
           Settings
         </div>
         <div style={{ fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 28, color: 'var(--ink)', lineHeight: 1.1 }}>
@@ -731,7 +731,7 @@ function CenterColumn({ stats, user, household }) {
           <div style={{ height: 24 }} />
 
           <div style={{
-            fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11,
+            fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11,
             letterSpacing: '0.2em', textTransform: 'uppercase',
             color: 'var(--accent)', marginBottom: 10,
           }}>
@@ -776,7 +776,7 @@ function CenterColumn({ stats, user, household }) {
           {/* This week, between us */}
           <div>
             <div style={{
-              fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11,
+              fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11,
               letterSpacing: '0.2em', textTransform: 'uppercase',
               color: 'var(--accent)', marginBottom: 12,
             }}>

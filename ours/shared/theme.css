@@ -187,16 +187,17 @@
    period via <span class="dot">.</span> */
 .h-hand, .h1, .h2, .h3 {
   font-family: var(--sans);
-  font-weight: 900;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: -0.025em;
-  line-height: 0.94;
+  letter-spacing: -0.02em;
+  line-height: 0.96;
   color: var(--navy);
 }
-.h1 { font-size: 34px; }
-.h2 { font-size: 25px; }
-.h3 { font-size: 19px; line-height: 1.0; }
-.h-hand { font-size: 22px; }
+/* Weight scales with size: big earns 900, small stays lighter. */
+.h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.025em; }
+.h2 { font-size: 25px; font-weight: 800; }
+.h3 { font-size: 19px; line-height: 1.05; font-weight: 700; letter-spacing: -0.01em; }
+.h-hand { font-size: 22px; font-weight: 800; }
 
 /* Hero display type */
 .display {
@@ -213,7 +214,7 @@
 /* Eyebrow label above sections */
 .eyebrow {
   font-family: var(--sans);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -244,7 +245,7 @@
   color: var(--rule);
   font-variant-numeric: tabular-nums;
 }
-.index-title { font-weight: 800; font-size: 18px; color: var(--navy); text-transform: uppercase; letter-spacing: -0.01em; }
+.index-title { font-weight: 700; font-size: 18px; color: var(--navy); text-transform: uppercase; letter-spacing: -0.01em; }
 .index-desc  { font-size: 14px; color: var(--ink-2); margin-top: 3px; }
 .index-arrow { color: var(--accent); font-size: 22px; transition: transform 0.4s var(--ease); }
 .index-row:hover .index-arrow { transform: translateX(4px); }
@@ -317,7 +318,7 @@
 }
 .appbar, .appbar * { border-radius: 0; }
 .brand {
-  font-family: var(--sans); font-size: 18px; font-weight: 900;
+  font-family: var(--sans); font-size: 18px; font-weight: 800;
   letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper);
   display: flex; align-items: center; gap: 10px;
 }
