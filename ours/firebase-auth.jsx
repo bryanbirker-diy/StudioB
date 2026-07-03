@@ -23,6 +23,34 @@
     return code;
   }
 
+  // ─── Accent theme (platform-wide, household-synced) ─────────────────────────
+  // Curated presets only — each carries its own ink so text-on-accent stays
+  // legible (light accents pair with navy ink, dark ones with paper).
+  const ACCENT_PRESETS = [
+    { id: 'red',    label: 'Red',    accent: 'oklch(56% 0.22 27)',  ink: 'oklch(99% 0.002 260)' },
+    { id: 'cobalt', label: 'Cobalt', accent: 'oklch(52% 0.20 256)', ink: 'oklch(99% 0.002 260)' },
+    { id: 'teal',   label: 'Teal',   accent: 'oklch(56% 0.12 195)', ink: 'oklch(99% 0.002 260)' },
+    { id: 'forest', label: 'Forest', accent: 'oklch(52% 0.14 152)', ink: 'oklch(99% 0.002 260)' },
+    { id: 'plum',   label: 'Plum',   accent: 'oklch(50% 0.20 350)', ink: 'oklch(99% 0.002 260)' },
+    { id: 'amber',  label: 'Amber',  accent: 'oklch(74% 0.16 68)',  ink: 'oklch(21% 0.045 262)' },
+  ];
+  function accentById(id) {
+    return ACCENT_PRESETS.find(p => p.id === id) || ACCENT_PRESETS[0];
+  }
+  // Everything reads var(--accent)/var(--accent-ink), so setting these two vars
+  // re-tints the whole suite instantly. Cached in localStorage so the choice
+  // paints immediately on next load (no default-red flash before household loads).
+  function applyAccent(id) {
+    const p = accentById(id);
+    const root = document.documentElement;
+    root.style.setProperty('--accent', p.accent);
+    root.style.setProperty('--accent-ink', p.ink);
+    try { localStorage.setItem('ours_accent', p.id); } catch (e) {}
+    return p.id;
+  }
+  // Instant paint from cache, before React/household are ready.
+  try { const c = localStorage.getItem('ours_accent'); if (c) applyAccent(c); } catch (e) {}
+
   // One-time migration: move localStorage data into Firestore on first sign-in
   async function migrateLocalData(householdId) {
     if (localStorage.getItem('ours_migrated')) return;
@@ -671,6 +699,11 @@
       return unsub;
     }, []);
 
+    // Keep the platform accent in sync with the household setting.
+    useEffect(() => {
+      applyAccent(household && household.accentColor ? household.accentColor : 'red');
+    }, [household]);
+
     function handleHouseholdDone(hh) {
       setHousehold(hh);
       if (!didMigrate.current && !localStorage.getItem('ours_migrated')) {
@@ -702,6 +735,9 @@
     AuthProvider,
     InviteCodeBanner,
     migrateLocalData,
+    ACCENT_PRESETS,
+    accentById,
+    applyAccent,
   };
 
 })();

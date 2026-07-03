@@ -3,7 +3,7 @@
    The center column is identical at every width. */
 
 // ─── Auth imports (from shared firebase-auth.jsx) ─────────────────────────
-const { AuthProvider, useAuth, InviteCodeBanner } = window._oursAuth;
+const { AuthProvider, useAuth, InviteCodeBanner, ACCENT_PRESETS, applyAccent } = window._oursAuth;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -521,6 +521,15 @@ function RightRail({ stats }) {
 
 function SettingsView({ user, household }) {
   const [copied, setCopied] = React.useState(false);
+  const { setHousehold } = useAuth();
+
+  function chooseAccent(id) {
+    applyAccent(id); // instant, platform-wide
+    if (household && household.id) {
+      setHousehold(h => ({ ...(h || {}), accentColor: id }));
+      db.doc(`households/${household.id}`).set({ accentColor: id }, { merge: true }).catch(console.error);
+    }
+  }
 
   function copyCode() {
     if (!household?.inviteCode) return;
@@ -591,6 +600,35 @@ function SettingsView({ user, household }) {
                 flexShrink: 0,
               }}
             >{copied ? '✓ Copied!' : 'Copy code'}</button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Accent color ── */}
+      <div style={card}>
+        <div style={cardHeader}>Accent color</div>
+        <div style={{ padding: '16px 18px' }}>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-soft)', marginBottom: 14, lineHeight: 1.5 }}>
+            Sets the accent across the whole suite — for both of you.
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            {(ACCENT_PRESETS || []).map(p => {
+              const active = (household?.accentColor || 'red') === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => chooseAccent(p.id)}
+                  title={p.label}
+                  aria-label={p.label}
+                  style={{
+                    width: 40, height: 40, padding: 0, borderRadius: 0,
+                    background: p.accent,
+                    border: active ? '3px solid var(--navy)' : '1px solid var(--rule)',
+                    cursor: 'pointer',
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
