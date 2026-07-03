@@ -7,10 +7,10 @@ const { AuthProvider: HomeAuthProvider, useAuth: useHomeAuth } = window._oursAut
 
 const STATUSES = [
   { id: 'dreaming',     label: 'Dreaming',    color: 'var(--ink-fade)', bg: 'transparent',            border: 'var(--rule)' },
-  { id: 'planning',     label: 'Planning',    color: 'var(--ink)',      bg: 'rgba(107,122,74,0.14)',  border: 'var(--olive)' },
-  { id: 'quoted',       label: 'Quoted',      color: 'var(--ink)',      bg: 'rgba(195,145,105,0.18)', border: 'var(--clay)' },
+  { id: 'planning',     label: 'Planning',    color: 'var(--ink)',      bg: 'color-mix(in oklch, var(--accent) 12%, transparent)',  border: 'var(--olive)' },
+  { id: 'quoted',       label: 'Quoted',      color: 'var(--ink)',      bg: 'color-mix(in oklch, var(--accent) 12%, transparent)', border: 'var(--clay)' },
   { id: 'in-progress',  label: 'In Progress', color: '#fdf6ec',         bg: 'var(--terracotta)',       border: '#5a3a20' },
-  { id: 'done',         label: 'Done',        color: 'var(--ink-fade)', bg: 'rgba(107,122,74,0.18)',  border: 'var(--olive)' },
+  { id: 'done',         label: 'Done',        color: 'var(--ink-fade)', bg: 'color-mix(in oklch, var(--navy) 10%, transparent)',  border: 'var(--olive)' },
 ];
 
 const CATEGORIES = [
@@ -54,20 +54,20 @@ function Nav({ onAdd }) {
     <nav style={{
       position: 'sticky', top: 0, zIndex: 50,
       background: 'var(--paper)',
-      borderBottom: '1.5px solid var(--rule-soft)',
+      borderBottom: '1px solid var(--rule-soft)',
       display: 'flex', alignItems: 'center',
       padding: '10px 16px', gap: 10,
     }}>
       <a href="../../" style={{
-        fontFamily: '"Cormorant Garamond", Garamond, serif',
-        fontWeight: 300, fontSize: 15,
-        color: 'var(--clay)', textDecoration: 'none',
-        letterSpacing: '-0.01em', flexShrink: 0, opacity: 0.75,
+        fontFamily: 'var(--sans)',
+        fontWeight: 700, fontSize: 12,
+        color: 'var(--ink-2)', textDecoration: 'none',
+        letterSpacing: '0.16em', textTransform: 'uppercase', flexShrink: 0,
       }}>← ours</a>
 
       <div style={{
-        width: 28, height: 28, borderRadius: '7px 9px 6px 8px',
-        background: 'var(--olive)', border: '1.5px solid #3e4823',
+        width: 28, height: 28, borderRadius: 0,
+        background: 'var(--olive)', border: '1px solid #3e4823',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: '#f7f5e6', fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 14,
         flexShrink: 0,
@@ -81,8 +81,8 @@ function Nav({ onAdd }) {
         onClick={onAdd}
         style={{
           padding: '5px 14px',
-          border: '1.5px solid var(--olive)',
-          borderRadius: '12px 14px 10px 13px',
+          border: '1px solid var(--olive)',
+          borderRadius: 0,
           background: 'var(--olive)', color: '#f7f5e6',
           fontFamily: 'var(--pen)', fontSize: 13,
           cursor: 'pointer',
@@ -100,7 +100,7 @@ function StatusBadge({ status }) {
     <span style={{
       fontFamily: 'var(--mono)', fontSize: 10,
       letterSpacing: '0.07em', textTransform: 'uppercase',
-      padding: '2px 8px', borderRadius: 10,
+      padding: '2px 8px', borderRadius: 0,
       background: s.bg, border: `1px solid ${s.border}`,
       color: s.color, whiteSpace: 'nowrap',
     }}>{s.label}</span>
@@ -158,16 +158,16 @@ function ProjectCard({ project, onClick }) {
     <div
       onClick={onClick}
       style={{
-        border: '1.5px solid var(--rule-soft)',
+        border: '1px solid var(--rule-soft)',
         borderLeft: `4px solid ${inProgress ? 'var(--terracotta)' : s.id === 'done' ? 'var(--olive)' : 'var(--rule-soft)'}`,
-        borderRadius: '0 10px 8px 0',
+        borderRadius: 0,
         padding: '14px 14px 14px 12px',
-        background: 'rgba(255,255,255,0.55)',
+        background: 'var(--card)',
         cursor: 'pointer',
         transition: 'background .12s',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.82)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--paper-2)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--card)'}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -225,8 +225,8 @@ function ProjectList({ projects, onEdit, onAdd }) {
           onClick={onAdd}
           style={{
             padding: '10px 22px',
-            border: '1.5px solid var(--olive)',
-            borderRadius: '12px 14px 10px 13px',
+            border: '1px solid var(--olive)',
+            borderRadius: 0,
             background: 'var(--olive)', color: '#f7f5e6',
             fontFamily: 'var(--pen)', fontSize: 14,
             cursor: 'pointer',
@@ -291,18 +291,18 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
   const chipBtn = (active, onClick, children, activeColor = 'var(--olive)', activeBorder = 'var(--olive)') => ({
     display: 'flex', alignItems: 'center', gap: 5,
     padding: '6px 12px',
-    border: `1.5px solid ${active ? activeBorder : 'var(--rule)'}`,
-    borderRadius: 20,
-    background: active ? `rgba(107,122,74,0.14)` : 'rgba(255,255,255,0.5)',
+    border: `1px solid ${active ? activeBorder : 'var(--rule)'}`,
+    borderRadius: 0,
+    background: active ? `color-mix(in oklch, var(--accent) 12%, transparent)` : 'var(--card)',
     fontFamily: 'var(--pen)', fontSize: 13,
     color: active ? activeColor : 'var(--ink-soft)',
     cursor: 'pointer', transition: 'all .1s',
   });
 
   const inputSty = {
-    border: '1.5px solid var(--rule)', borderRadius: '5px 7px 4px 6px',
+    border: '1px solid var(--rule)', borderRadius: 0,
     padding: '9px 12px', fontFamily: 'var(--pen)', fontSize: 14,
-    color: 'var(--ink)', background: 'rgba(255,255,255,0.7)',
+    color: 'var(--ink)', background: 'var(--card)',
     outline: 'none', width: '100%',
   };
 
@@ -310,13 +310,13 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(24,20,16,.48)', backdropFilter: 'blur(4px)',
+        background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: 'var(--paper)', borderRadius: '18px 18px 4px 4px',
+        background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,
         padding: '20px 18px 36px', width: '100%', maxWidth: 500,
         maxHeight: '92vh', overflowY: 'auto',
       }}>
@@ -376,9 +376,9 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
                 onClick={() => setStatus(s.id)}
                 style={{
                   padding: '6px 14px',
-                  border: `1.5px solid ${status === s.id ? s.border : 'var(--rule)'}`,
-                  borderRadius: 20,
-                  background: status === s.id ? s.bg : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${status === s.id ? s.border : 'var(--rule)'}`,
+                  borderRadius: 0,
+                  background: status === s.id ? s.bg : 'var(--card)',
                   fontFamily: 'var(--pen)', fontSize: 13,
                   color: status === s.id ? s.color : 'var(--ink-soft)',
                   cursor: 'pointer', transition: 'all .1s',
@@ -397,7 +397,7 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
         <div style={{
           margin: '4px -18px 18px',
           padding: '16px 18px',
-          background: 'rgba(107,122,74,0.06)',
+          background: 'var(--paper-2)',
           borderTop: '1px solid var(--rule-soft)',
           borderBottom: '1px solid var(--rule-soft)',
         }}>
@@ -449,7 +449,7 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
 
           {/* Live cost comparison */}
           {(parseCost(estCost) || parseCost(quotedCost)) && (
-            <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.5)', borderRadius: 6 }}>
+            <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--card)', borderRadius: 0 }}>
               <CostDisplay estimated={estCost} quoted={quotedCost} />
             </div>
           )}
@@ -477,7 +477,7 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
           onClick={handleSave}
           style={{
             width: '100%', padding: '11px',
-            border: 'none', borderRadius: '6px 8px 5px 7px',
+            border: 'none', borderRadius: 0,
             background: 'var(--olive)', color: '#f7f5e6',
             fontFamily: 'var(--pen)', fontSize: 15,
             cursor: 'pointer',
@@ -494,8 +494,8 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
                 onClick={() => setConfirmDel(true)}
                 style={{
                   width: '100%', padding: '8px',
-                  background: 'none', border: '1.5px solid var(--rule-soft)',
-                  borderRadius: '6px', fontFamily: 'var(--pen)', fontSize: 13,
+                  background: 'none', border: '1px solid var(--rule-soft)',
+                  borderRadius: 0, fontFamily: 'var(--pen)', fontSize: 13,
                   color: 'var(--ink-fade)', cursor: 'pointer',
                 }}
               >Delete project</button>
@@ -505,8 +505,8 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
                   onClick={() => onDelete(project.id)}
                   style={{
                     flex: 1, padding: '8px',
-                    background: 'none', border: '1.5px solid var(--terracotta)',
-                    borderRadius: '6px', fontFamily: 'var(--pen)', fontSize: 13,
+                    background: 'none', border: '1px solid var(--terracotta)',
+                    borderRadius: 0, fontFamily: 'var(--pen)', fontSize: 13,
                     color: 'var(--terracotta)', cursor: 'pointer',
                   }}
                 >Yes, delete</button>
@@ -514,8 +514,8 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
                   onClick={() => setConfirmDel(false)}
                   style={{
                     flex: 1, padding: '8px',
-                    background: 'none', border: '1.5px solid var(--rule-soft)',
-                    borderRadius: '6px', fontFamily: 'var(--pen)', fontSize: 13,
+                    background: 'none', border: '1px solid var(--rule-soft)',
+                    borderRadius: 0, fontFamily: 'var(--pen)', fontSize: 13,
                     color: 'var(--ink-soft)', cursor: 'pointer',
                   }}
                 >Keep it</button>
@@ -543,9 +543,9 @@ function SummaryBar({ projects }) {
     <div style={{
       margin: '0 16px 4px',
       padding: '10px 14px',
-      background: 'rgba(107,122,74,0.08)',
-      border: '1px solid rgba(107,122,74,0.2)',
-      borderRadius: '8px 10px 7px 9px',
+      background: 'var(--paper-2)',
+      border: '1px solid var(--rule)',
+      borderRadius: 0,
       display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center',
     }}>
       <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)' }}>
