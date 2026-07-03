@@ -79,18 +79,21 @@ function OursMark({ size = 'md', inline = false }) {
   return (
     <div style={{ display: inline ? 'inline-flex' : 'flex', alignItems: 'baseline', gap: 10 }}>
       <span style={{
-        fontFamily: '"Cormorant Garamond", "Cormorant", Garamond, serif',
-        fontWeight: 300,
+        fontFamily: 'var(--sans)',
+        fontWeight: 900,
         fontSize: s.mark,
-        letterSpacing: '-0.01em',
-        color: 'var(--clay)',
+        letterSpacing: '-0.02em',
+        color: 'var(--navy)',
         lineHeight: 1,
-      }}>ours</span>
+        textTransform: 'uppercase',
+      }}>Ours<span style={{ color: 'var(--accent)' }}>.</span></span>
       <span style={{
-        fontFamily: 'var(--mono)',
+        fontFamily: 'var(--sans)',
+        fontWeight: 700,
         fontSize: s.tag,
-        color: 'var(--ink-fade)',
-        letterSpacing: '0.01em',
+        color: 'var(--ink-2)',
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
         lineHeight: 1,
       }}>where our hours go</span>
     </div>
@@ -134,8 +137,8 @@ const PRODUCTS = [
     id: 'money',
     name: 'Our Money',
     letter: '$',
-    color: '#b5892e',
-    border: '#7a5c1a',
+    color: 'var(--navy)',
+    border: 'var(--navy)',
     tagline: 'Subscriptions, bills, and where it goes.',
     href: 'projects/Money/',
     live: true,
@@ -161,7 +164,7 @@ function ProductIcon({ letter, color, border }) {
   );
 }
 
-function ProductCard({ product, stats, onClick }) {
+function ProductCard({ product, index, stats, onClick }) {
   const statusLine = React.useMemo(() => {
     if (!product.live) return 'Coming soon';
     if (product.id === 'pantry' && stats) {
@@ -183,48 +186,52 @@ function ProductCard({ product, stats, onClick }) {
     <div
       onClick={onClick}
       style={{
-        display: 'flex', alignItems: 'center', gap: 14,
-        padding: '16px 14px',
-        border: '1.5px solid var(--rule-soft)',
-        borderRadius: '10px 13px 8px 12px / 11px 10px 13px 9px',
-        background: 'rgba(255,255,255,0.55)',
+        display: 'grid', gridTemplateColumns: 'auto 1fr auto',
+        alignItems: 'center', gap: 18,
+        padding: '20px 4px',
+        borderBottom: '1px solid var(--rule)',
         cursor: product.live ? 'pointer' : 'default',
-        transition: 'background .12s, transform .1s',
+        transition: 'background-color 0.4s var(--ease)',
         position: 'relative',
-        opacity: product.live ? 1 : 0.72,
+        opacity: product.live ? 1 : 0.5,
       }}
-      onMouseEnter={e => { if (product.live) e.currentTarget.style.background = 'rgba(255,255,255,0.82)'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.55)'; }}
+      onMouseEnter={e => { if (product.live) e.currentTarget.style.background = 'var(--paper-2)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
     >
-      <ProductIcon letter={product.letter} color={product.color} border={product.border} />
+      <div style={{
+        fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 40,
+        lineHeight: 1, letterSpacing: '-0.03em', color: 'var(--rule)',
+        fontVariantNumeric: 'tabular-nums',
+      }}>
+        {String((index ?? 0) + 1).padStart(2, '0')}
+      </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ minWidth: 0 }}>
         <div style={{
-          fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 20,
-          color: 'var(--ink)', lineHeight: 1.1,
+          fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 17,
+          color: 'var(--navy)', lineHeight: 1.1,
+          textTransform: 'uppercase', letterSpacing: '-0.01em',
         }}>
           {product.name}
         </div>
         <div style={{
-          fontFamily: 'var(--pen)', fontSize: 13,
-          color: 'var(--ink-soft)', marginTop: 3, lineHeight: 1.3,
+          fontFamily: 'var(--sans)', fontSize: 13,
+          color: 'var(--ink-2)', marginTop: 3, lineHeight: 1.35,
         }}>
           {product.tagline}
         </div>
         {statusLine && (
           <div style={{
-            fontFamily: 'var(--mono)', fontSize: 11,
-            color: 'var(--ink-fade)', marginTop: 5,
+            fontFamily: 'var(--sans)', fontSize: 11, fontWeight: 600,
+            color: 'var(--ink-fade)', marginTop: 6, letterSpacing: '0.03em',
           }}>
-            {product.live ? <span>• </span> : null}{statusLine}
+            {statusLine}
           </div>
         )}
       </div>
 
       {product.live && (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0, opacity: 0.35 }}>
-          <path d="M6.5 4.5 L11.5 9 L6.5 13.5" stroke="var(--ink)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <span style={{ color: 'var(--accent)', fontSize: 22, lineHeight: 1 }}>→</span>
       )}
     </div>
   );
@@ -232,21 +239,21 @@ function ProductCard({ product, stats, onClick }) {
 
 // ─── Summary pills ("This week, between us") ─────────────────────────────
 
-function SummaryPill({ icon, label, color, border, textColor }) {
+function SummaryPill({ label }) {
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
-      padding: '5px 12px',
-      background: color || 'rgba(255,255,255,0.6)',
-      border: `1.5px solid ${border || 'var(--rule)'}`,
-      borderRadius: '16px 18px 14px 17px',
-      fontFamily: 'var(--pen)',
-      fontSize: 13,
-      color: textColor || 'var(--ink)',
-      boxShadow: '1px 1.5px 0 rgba(43,38,32,0.12)',
+      padding: '6px 12px',
+      background: 'var(--card)',
+      border: '1px solid var(--rule)',
+      borderRadius: 0,
+      fontFamily: 'var(--sans)',
+      fontWeight: 600, fontSize: 11,
+      letterSpacing: '0.06em', textTransform: 'uppercase',
+      color: 'var(--ink-soft)',
+      boxShadow: 'none',
       whiteSpace: 'nowrap',
     }}>
-      {icon && <span>{icon}</span>}
       {label}
     </div>
   );
@@ -279,10 +286,10 @@ function BottomTabBar({ active = 'home', onTabChange }) {
           <div key={t.id}
             onClick={() => navigable && onTabChange?.(t.id)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              fontFamily: 'var(--mono)', fontSize: 9,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-              color: isActive ? 'var(--ink)' : 'var(--ink-fade)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 9,
+              letterSpacing: '0.14em', textTransform: 'uppercase',
+              color: isActive ? 'var(--accent)' : 'var(--ink-fade)',
               cursor: navigable ? 'pointer' : 'default',
               opacity: navigable ? 1 : 0.38,
               minWidth: 48,
@@ -292,11 +299,11 @@ function BottomTabBar({ active = 'home', onTabChange }) {
           >
             <div style={{
               width: 22, height: 22,
-              border: `1.5px solid ${isActive ? 'var(--ink)' : 'var(--ink-fade)'}`,
-              borderRadius: '50% 55% 45% 52%',
+              border: `1px solid ${isActive ? 'var(--accent)' : 'var(--ink-fade)'}`,
+              borderRadius: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 11,
-              background: isActive ? 'var(--ink)' : 'transparent',
+              background: isActive ? 'var(--accent)' : 'transparent',
               color: isActive ? 'var(--paper)' : 'var(--ink-fade)',
             }}>
               {t.icon}
@@ -335,13 +342,14 @@ function LeftRail({ activeProduct, household, user }) {
       {/* Wordmark */}
       <div style={{ position: 'relative' }}>
         <div style={{
-          fontFamily: '"Cormorant Garamond", Garamond, serif',
-          fontWeight: 300, fontSize: 32,
-          color: 'var(--clay)', letterSpacing: '-0.01em',
-        }}>ours</div>
+          fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 30,
+          color: 'var(--navy)', letterSpacing: '-0.025em',
+          textTransform: 'uppercase', lineHeight: 0.92,
+        }}>Ours<span style={{ color: 'var(--accent)' }}>.</span></div>
         <div style={{
-          fontFamily: 'var(--mono)', fontSize: 11,
-          color: 'var(--ink-fade)', marginTop: 2,
+          fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10,
+          letterSpacing: '0.16em', textTransform: 'uppercase',
+          color: 'var(--ink-2)', marginTop: 4,
         }}>where our hours go</div>
         {/* mini clock */}
         <svg viewBox="0 0 100 100" style={{ position: 'absolute', top: -8, right: 0, width: 54, height: 54, opacity: 0.09 }} aria-hidden="true">
@@ -358,7 +366,7 @@ function LeftRail({ activeProduct, household, user }) {
 
       {/* Suite nav */}
       <div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-fade)', marginBottom: 10 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
           The Suite
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -369,18 +377,18 @@ function LeftRail({ activeProduct, household, user }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '7px 10px',
-                borderRadius: '7px 9px 6px 8px',
-                background: activeProduct === p.id ? 'rgba(255,255,255,0.7)' : 'transparent',
+                borderRadius: 0,
+                background: activeProduct === p.id ? 'var(--card)' : 'transparent',
                 border: activeProduct === p.id ? '1.5px solid var(--rule-soft)' : '1.5px solid transparent',
                 cursor: p.live ? 'pointer' : 'default',
                 opacity: p.live ? 1 : 0.5,
               }}
             >
               <div style={{
-                width: 24, height: 24, borderRadius: '6px 7px 5px 6px',
+                width: 24, height: 24, borderRadius: 0,
                 background: p.color, border: `1px solid ${p.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fdf9f0', fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 12,
+                color: '#fdf9f0', fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 12,
                 flexShrink: 0,
               }}>
                 {p.letter}
@@ -401,7 +409,7 @@ function LeftRail({ activeProduct, household, user }) {
 
       {/* Household */}
       <div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-fade)', marginBottom: 8 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
           {household?.name || 'Household'}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -470,11 +478,11 @@ function RightRail({ stats }) {
       {/* This week at a glance */}
       <div style={{
         border: '1.5px solid var(--rule-soft)',
-        borderRadius: '8px 10px 7px 9px',
+        borderRadius: 0,
         padding: '14px 16px',
         background: 'rgba(255,255,255,0.45)',
       }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-fade)', marginBottom: 12 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
           This week, at a glance
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -494,11 +502,11 @@ function RightRail({ stats }) {
       {/* The suite blurb */}
       <div style={{
         border: '1.5px dashed var(--rule-soft)',
-        borderRadius: '8px 10px 7px 9px',
+        borderRadius: 0,
         padding: '14px 16px',
         background: 'transparent',
       }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-fade)', marginBottom: 8 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
           The Suite
         </div>
         <div style={{ fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
@@ -526,7 +534,7 @@ function SettingsView({ user, household }) {
 
   const card = {
     border: '1.5px solid var(--rule-soft)',
-    borderRadius: '8px 10px 7px 9px',
+    borderRadius: 0,
     background: 'rgba(255,255,255,0.55)',
     overflow: 'hidden',
   };
@@ -544,7 +552,7 @@ function SettingsView({ user, household }) {
 
       {/* Page heading */}
       <div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-fade)', marginBottom: 5 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 5 }}>
           Settings
         </div>
         <div style={{ fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 28, color: 'var(--ink)', lineHeight: 1.1 }}>
@@ -574,7 +582,7 @@ function SettingsView({ user, household }) {
               style={{
                 background: copied ? 'var(--olive)' : 'var(--terracotta)',
                 color: '#fff', border: 'none',
-                borderRadius: '6px 8px 5px 7px',
+                borderRadius: 0,
                 padding: '9px 18px',
                 fontFamily: 'var(--pen)', fontSize: 13,
                 cursor: 'pointer',
@@ -653,7 +661,7 @@ function SettingsView({ user, household }) {
             style={{
               width: '100%', padding: '10px 14px',
               border: '1.5px solid var(--rule-soft)',
-              borderRadius: '6px 8px 5px 7px',
+              borderRadius: 0,
               background: 'none',
               fontFamily: 'var(--pen)', fontSize: 14,
               color: 'var(--ink-soft)',
@@ -723,28 +731,24 @@ function CenterColumn({ stats, user, household }) {
           <div style={{ height: 24 }} />
 
           <div style={{
-            fontFamily: 'var(--mono)', fontSize: 11,
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-            color: 'var(--ink-fade)', marginBottom: 6,
+            fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11,
+            letterSpacing: '0.2em', textTransform: 'uppercase',
+            color: 'var(--accent)', marginBottom: 10,
           }}>
             {greeting()}{user ? `, ${user.displayName?.split(' ')[0] || ''}` : ''}
           </div>
 
           <h1 style={{
-            fontFamily: 'var(--hand)',
-            fontWeight: 700,
-            fontSize: 32,
-            color: 'var(--ink)',
+            fontFamily: 'var(--sans)',
+            fontWeight: 900,
+            fontSize: 'clamp(34px, 9vw, 46px)',
+            color: 'var(--navy)',
             margin: 0,
-            lineHeight: 1.1,
-            display: 'inline-block',
-            backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 4'><path d='M0,2 Q15,4 30,2 T60,2' fill='none' stroke='%23a8754d' stroke-width='1.6' stroke-linecap='round'/></svg>\")",
-            backgroundSize: '60px 4px',
-            backgroundRepeat: 'repeat-x',
-            backgroundPosition: '0 100%',
-            paddingBottom: 6,
+            lineHeight: 0.94,
+            letterSpacing: '-0.025em',
+            textTransform: 'uppercase',
           }}>
-            What are we planning?
+            What are we planning<span style={{ color: 'var(--accent)' }}>?</span>
           </h1>
         </div>
 
@@ -754,10 +758,11 @@ function CenterColumn({ stats, user, household }) {
           {household?.inviteCode && (household?.memberUids || []).length < 2 && (
             <InviteCodeBanner household={household} />
           )}
-          {PRODUCTS.map(p => (
+          {PRODUCTS.map((p, i) => (
             <ProductCard
               key={p.id}
               product={p}
+              index={i}
               stats={p.id === 'pantry' ? stats : null}
               onClick={() => handleCardClick(p)}
             />
@@ -771,9 +776,9 @@ function CenterColumn({ stats, user, household }) {
           {/* This week, between us */}
           <div>
             <div style={{
-              fontFamily: 'var(--mono)', fontSize: 9,
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: 'var(--ink-fade)', marginBottom: 10,
+              fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11,
+              letterSpacing: '0.2em', textTransform: 'uppercase',
+              color: 'var(--accent)', marginBottom: 12,
             }}>
               This week, between us
             </div>
@@ -795,11 +800,12 @@ function CenterColumn({ stats, user, household }) {
       {comingSoon && activeTab === 'home' && (
         <div style={{
           position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--ink)', color: 'var(--paper)',
-          fontFamily: 'var(--pen)', fontSize: 14,
-          padding: '10px 20px',
-          borderRadius: '20px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+          background: 'var(--navy)', color: 'var(--paper)',
+          fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12,
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          padding: '12px 22px',
+          borderRadius: 0,
+          boxShadow: 'none',
           zIndex: 100,
           whiteSpace: 'nowrap',
         }}>
