@@ -29,7 +29,7 @@
     .app-topbar {
       position: sticky; top: 0; z-index: 50;
       background: var(--paper);
-      border-bottom: 1.5px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
       display: flex; align-items: center;
       gap: 12px;
       /* safe-area-inset-top for notch/Dynamic Island */
@@ -41,7 +41,7 @@
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
       background: var(--paper);
-      border-top: 1.5px solid var(--rule);
+      border-top: 1px solid var(--rule);
       display: flex; justify-content: center; gap: 6px;
       padding: 8px 12px;
       padding-bottom: max(14px, env(safe-area-inset-bottom));
@@ -89,7 +89,7 @@
          viewport up to reveal a focused input */
       transform: translate(var(--vvl, 0px), var(--vvt, 0px));
       z-index: 200;
-      background: rgba(24,20,16,.48);
+      background: oklch(21% 0.045 262 / 0.55);
       backdrop-filter: blur(4px);
       display: flex; align-items: flex-end; justify-content: center;
       padding: 0;
@@ -100,7 +100,8 @@
     }
     .modal-sheet {
       background: var(--paper);
-      border-radius: 18px 18px 4px 4px;
+      border-top: 5px solid var(--navy);
+      border-radius: 0;
       padding: 20px 18px;
       /* safe-area padding so content clears home indicator */
       padding-bottom: max(20px, env(safe-area-inset-bottom));
@@ -116,22 +117,22 @@
       -webkit-overflow-scrolling: touch;
     }
     @media (min-width: 560px) {
-      .modal-sheet { border-radius: 12px; }
+      .modal-sheet { border-radius: 0; }
     }
 
     /* ── Calendar day rows ───────────────────────────────────── */
     .day-row {
-      border: 1.5px solid var(--rule-soft);
-      border-radius: 8px 10px 6px 9px;
+      border: 1px solid var(--rule-soft);
+      border-radius: 0;
       margin-bottom: 10px;
-      background: rgba(255,255,255,0.45);
+      background: var(--card);
       overflow: hidden;
     }
     .day-header {
       padding: 6px 12px;
-      border-bottom: 1.5px solid var(--rule-soft);
+      border-bottom: 1px solid var(--rule-soft);
       display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255,255,255,0.3);
+      background: var(--paper-2);
     }
     .day-slots {
       display: grid;
@@ -139,7 +140,7 @@
     }
     .day-slot-cell {
       padding: 8px 10px;
-      border-right: 1.5px solid var(--rule-soft);
+      border-right: 1px solid var(--rule-soft);
       cursor: pointer;
       transition: background .1s;
       min-height: 60px;
@@ -148,17 +149,17 @@
     .day-slot-cell:hover { background: rgba(0,0,0,0.03); }
     @media (max-width: 480px) {
       .day-slots { grid-template-columns: 1fr; }
-      .day-slot-cell { border-right: none; border-bottom: 1.5px solid var(--rule-soft); }
+      .day-slot-cell { border-right: none; border-bottom: 1px solid var(--rule-soft); }
       .day-slot-cell:last-child { border-bottom: none; }
     }
 
     /* ── Recipe cards ────────────────────────────────────────── */
     .recipe-card {
-      border: 1.5px solid var(--rule-soft);
-      border-radius: 8px 10px 6px 9px;
+      border: 1px solid var(--rule-soft);
+      border-radius: 0;
       padding: 14px;
       margin-bottom: 10px;
-      background: rgba(255,255,255,0.55);
+      background: var(--card);
     }
 
     /* ── Grocery items ───────────────────────────────────────── */
@@ -167,7 +168,7 @@
       padding: 9px 6px;
       border-bottom: 1px dotted var(--rule-soft);
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 0;
       transition: background .1s;
     }
     .grocery-item:last-child { border-bottom: none; }
@@ -175,43 +176,43 @@
 
     /* ── Step indicator ──────────────────────────────────────── */
     .step-dot {
-      width: 26px; height: 26px; border-radius: 50%;
-      border: 1.5px solid var(--rule);
+      width: 26px; height: 26px; border-radius: 0;
+      border: 1px solid var(--rule);
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--mono); font-size: 11px;
+      font-family: var(--sans); font-weight: 700; font-size: 11px;
       color: var(--ink-fade); flex-shrink: 0;
     }
-    .step-dot.active { background: var(--brown); border-color: var(--brown); color: #fdf9f0; }
-    .step-dot.done   { background: var(--olive); border-color: var(--olive); color: #f7f5e6; }
-    .step-line { flex: 1; height: 1.5px; background: var(--rule-soft); }
+    .step-dot.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .step-dot.done   { background: var(--navy); border-color: var(--navy); color: var(--paper); }
+    .step-line { flex: 1; height: 1px; background: var(--rule); }
 
     /* ── Form inputs ─────────────────────────────────────────── */
     .text-input {
-      border: 1.5px solid var(--rule);
-      border-radius: 5px 7px 4px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 0;
       padding: 7px 10px;
       font-family: var(--pen);
       font-size: 14px;
       color: var(--ink);
-      background: rgba(255,255,255,0.55);
+      background: var(--card);
       outline: none;
       width: 100%;
     }
-    .text-input:focus { border-color: var(--brown); }
+    .text-input:focus { border-color: var(--accent); }
     input[type="date"].text-input { font-family: var(--mono); }
 
     .ingredient-textarea {
       width: 100%; min-height: 150px;
-      border: 1.5px solid var(--rule);
-      border-radius: 5px 7px 4px 6px;
+      border: 1px solid var(--rule);
+      border-radius: 0;
       padding: 10px;
       font-family: var(--mono); font-size: 13px;
       color: var(--ink);
-      background: rgba(255,255,255,0.55);
+      background: var(--card);
       resize: vertical; outline: none;
       line-height: 1.7;
     }
-    .ingredient-textarea:focus { border-color: var(--brown); }
+    .ingredient-textarea:focus { border-color: var(--accent); }
 
     /* ── Empty states ────────────────────────────────────────── */
     .empty-state {
@@ -240,25 +241,25 @@
       padding: 5px 12px;
       border-top: 1px dotted var(--rule-soft);
       cursor: pointer;
-      background: rgba(255,255,255,0.15);
+      background: transparent;
       transition: background .1s;
       min-height: 30px;
     }
-    .day-slot-dessert:hover { background: rgba(195,145,105,0.08); }
-    .day-slot-dessert.filled { background: rgba(195,145,105,0.12); }
+    .day-slot-dessert:hover { background: var(--paper-2); }
+    .day-slot-dessert.filled { background: color-mix(in oklch, var(--accent) 8%, transparent); }
 
     /* ── Pantry sections ─────────────────────────────────────── */
     .pantry-section {
-      border: 1.5px solid var(--rule-soft);
-      border-radius: 8px 10px 6px 9px;
+      border: 1px solid var(--rule-soft);
+      border-radius: 0;
       margin-bottom: 14px;
-      background: rgba(255,255,255,0.45);
+      background: var(--card);
       overflow: hidden;
     }
     .pantry-section-header {
       padding: 10px 14px;
-      border-bottom: 1.5px solid var(--rule-soft);
-      background: rgba(255,255,255,0.3);
+      border-bottom: 1px solid var(--rule-soft);
+      background: var(--paper-2);
       display: flex; justify-content: space-between; align-items: center;
     }
     .pantry-item {

@@ -92,10 +92,10 @@ function DateField({ label, value, onChange, min }) {
       </div>
       <div style={{ position: 'relative' }}>
         <div style={{
-          border: '1.5px solid var(--rule)',
-          borderRadius: '6px 8px 5px 7px',
+          border: '1px solid var(--rule)',
+          borderRadius: 0,
           padding: '11px 14px',
-          background: 'rgba(255,255,255,0.65)',
+          background: 'var(--card)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontFamily: 'var(--pen)', fontSize: 15,
           color: value ? 'var(--ink)' : 'var(--ink-fade)',
@@ -144,10 +144,10 @@ function CalendarMiniPreview({ start, end }) {
 
   return (
     <div style={{
-      border: '1.5px solid var(--rule-soft)',
-      borderRadius: '8px 10px 7px 9px',
+      border: '1px solid var(--rule-soft)',
+      borderRadius: 0,
       padding: '14px 14px 12px',
-      background: 'rgba(255,255,255,0.45)',
+      background: 'var(--card)',
       marginTop: 14,
     }}>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.12em',
@@ -164,11 +164,9 @@ function CalendarMiniPreview({ start, end }) {
         {cells.map((cell, i) => {
           if (!cell) return <div key={`e${i}`} style={{ height: 26 }} />;
           const isEndpoint = cell.isStart || cell.isEnd;
-          const bg    = isEndpoint ? 'var(--clay)' : cell.inRange ? 'rgba(195,145,105,0.22)' : 'transparent';
-          const color = isEndpoint ? '#fdf6ec' : cell.inRange ? 'var(--brown)' : 'var(--ink-fade)';
-          const br    = cell.isStart && cell.isEnd ? '50%'
-            : cell.isStart ? '50% 0 0 50%' : cell.isEnd ? '0 50% 50% 0'
-            : cell.inRange ? '0' : '4px';
+          const bg    = isEndpoint ? 'var(--accent)' : cell.inRange ? 'color-mix(in oklch, var(--accent) 16%, transparent)' : 'transparent';
+          const color = isEndpoint ? 'var(--accent-ink)' : cell.inRange ? 'var(--navy)' : 'var(--ink-fade)';
+          const br    = '0';
           return (
             <div key={cell.iso} style={{
               height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -565,10 +563,10 @@ function PlanCalendar({ plan, recipes, onUpdatePlan, onNewPlan, onNavigate }) {
 
   const BG = {
     empty:   'transparent',
-    eatout:  'rgba(168,117,77,0.1)',
-    adhoc:   'rgba(107,122,74,0.1)',
-    recipe:  'rgba(255,255,255,0.7)',
-    missing: 'rgba(168,117,77,0.07)',
+    eatout:  'color-mix(in oklch, var(--accent) 8%, transparent)',
+    adhoc:   'color-mix(in oklch, var(--navy) 6%, transparent)',
+    recipe:  'var(--card)',
+    missing: 'color-mix(in oklch, var(--accent) 6%, transparent)',
   };
 
   return (
@@ -1272,7 +1270,7 @@ function PantryTab({ pantry, onUpdatePantry, onNavigate }) {
         </div>
         <div>
           {staples.length === 0 && (
-            <div className="note" style={{ padding: '10px 14px', fontStyle: 'italic' }}>
+            <div className="note" style={{ padding: '10px 14px', fontStyle: 'normal' }}>
               None yet. Add things like salt, olive oil, butter.
             </div>
           )}
@@ -1322,7 +1320,7 @@ function PantryTab({ pantry, onUpdatePantry, onNavigate }) {
         </div>
         <div>
           {onHand.length === 0 && (
-            <div className="note" style={{ padding: '10px 14px', fontStyle: 'italic' }}>
+            <div className="note" style={{ padding: '10px 14px', fontStyle: 'normal' }}>
               Check items off your grocery list to mark them as on hand.
             </div>
           )}
@@ -1361,7 +1359,7 @@ function PantryTab({ pantry, onUpdatePantry, onNavigate }) {
         </div>
         <div>
           {extras.length === 0 && (
-            <div className="note" style={{ padding: '10px 14px', fontStyle: 'italic' }}>
+            <div className="note" style={{ padding: '10px 14px', fontStyle: 'normal' }}>
               Nothing added yet. Paper towels, a birthday card…
             </div>
           )}
