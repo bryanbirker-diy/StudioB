@@ -568,6 +568,7 @@
       user: { uid: 'dev-user', displayName: 'Dev Preview', email: 'dev@localhost', photoURL: '' },
       household: {
         id: 'dev-household', name: 'The Preview Household', inviteCode: 'DEV123',
+        accentColor: (() => { try { return localStorage.getItem('ours_accent') || 'red'; } catch (e) { return 'red'; } })(),
         memberUids: ['dev-user'],
         memberProfiles: { 'dev-user': { displayName: 'Dev Preview' } },
       },
