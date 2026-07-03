@@ -122,22 +122,22 @@
         background: 'var(--paper-2)', gap: 20,
       }}>
         <div style={{
-          fontFamily: '"Cormorant Garamond", Garamond, serif',
-          fontWeight: 300, fontSize: 40, color: 'var(--clay)',
-          letterSpacing: '-0.04em',
-        }}>ours</div>
+          fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 46,
+          color: 'var(--navy)', letterSpacing: '-0.025em',
+          textTransform: 'uppercase', lineHeight: 0.92,
+        }}>Ours<span style={{ color: 'var(--accent)' }}>.</span></div>
         <div style={{
-          width: 28, height: 28,
+          width: 26, height: 26,
           border: '2px solid var(--rule)',
-          borderTopColor: 'var(--terracotta)',
+          borderTopColor: 'var(--accent)',
           borderRadius: '50%',
           animation: 'ourspin 0.8s linear infinite',
         }} />
         {status && (
           <div style={{
-            fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
-            color: 'var(--ink-fade)', maxWidth: 280, textAlign: 'center',
-            lineHeight: 1.5,
+            fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 11,
+            letterSpacing: '0.06em', color: 'var(--ink-2)',
+            maxWidth: 280, textAlign: 'center', lineHeight: 1.5,
           }}>{status}</div>
         )}
         <style>{`@keyframes ourspin { to { transform: rotate(360deg); } }`}</style>
@@ -215,14 +215,16 @@
 
         <div style={{ textAlign: 'center', position: 'relative' }}>
           <div style={{
-            fontFamily: '"Cormorant Garamond", Garamond, serif',
-            fontWeight: 300, fontSize: 60, color: 'var(--clay)',
-            letterSpacing: '-0.04em', lineHeight: 1,
-          }}>ours</div>
+            fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12,
+            letterSpacing: '0.22em', textTransform: 'uppercase',
+            color: 'var(--accent)', marginBottom: 16,
+          }}>Plan life, together</div>
           <div style={{
-            fontFamily: 'var(--pen)', fontSize: 14,
-            color: 'var(--ink)', opacity: 0.55, marginTop: 10,
-          }}>plan life, together</div>
+            fontFamily: 'var(--sans)', fontWeight: 900,
+            fontSize: 'clamp(56px, 17vw, 92px)', color: 'var(--navy)',
+            letterSpacing: '-0.025em', lineHeight: 0.9,
+            textTransform: 'uppercase',
+          }}>Ours<span style={{ color: 'var(--accent)' }}>.</span></div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', maxWidth: 300, position: 'relative' }}>
@@ -231,14 +233,16 @@
             disabled={loading}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-              padding: '13px 20px', borderRadius: '8px 10px 7px 9px',
-              border: '1.5px solid var(--rule)',
-              background: 'rgba(255,255,255,0.88)',
-              fontFamily: 'var(--pen)', fontSize: 15, color: 'var(--ink)',
+              padding: '15px 20px', borderRadius: 0,
+              border: '1px solid var(--navy)',
+              background: 'transparent',
+              fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13,
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: 'var(--navy)',
               cursor: loading ? 'default' : 'pointer',
               opacity: loading ? 0.6 : 1,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-              transition: 'opacity 0.15s',
+              boxShadow: 'none',
+              transition: 'color 0.4s, border-color 0.4s',
             }}
           >
             {/* Google G logo */}
@@ -269,23 +273,28 @@
       <div style={{
         minHeight: '100dvh', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        background: '#f5f0e8', fontFamily: 'system-ui, sans-serif',
-        padding: '2rem', textAlign: 'center',
+        background: 'var(--paper-2)', fontFamily: 'var(--sans)',
+        padding: '40px 24px', textAlign: 'center', gap: 18,
       }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔒</div>
-        <h2 style={{ margin: '0 0 0.5rem', color: '#3d2b1f', fontSize: '1.4rem' }}>
-          Access restricted
-        </h2>
-        <p style={{ color: '#7a5c47', maxWidth: '320px', lineHeight: 1.5, margin: '0 0 1.5rem' }}>
-          <strong>{email}</strong> hasn't been added yet.
-          Contact Bryan to get access.
+        <div style={{
+          fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12,
+          letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent)',
+        }}>Access restricted</div>
+        <h2 style={{
+          margin: 0, color: 'var(--navy)', fontSize: 34, fontWeight: 900,
+          textTransform: 'uppercase', letterSpacing: '-0.025em', lineHeight: 0.94,
+        }}>Not on the list<span style={{ color: 'var(--accent)' }}>.</span></h2>
+        <p style={{ color: 'var(--ink-soft)', maxWidth: 340, lineHeight: 1.5, margin: 0, fontSize: 15 }}>
+          <strong style={{ color: 'var(--navy)' }}>{email}</strong> hasn't been added yet. Contact Bryan to get access.
         </p>
         <button
           onClick={() => { window.location.reload(); }}
           style={{
-            background: '#c39169', color: '#fff', border: 'none',
-            borderRadius: '8px', padding: '0.6rem 1.4rem',
-            fontSize: '0.95rem', cursor: 'pointer',
+            background: 'transparent', color: 'var(--navy)',
+            border: '1px solid var(--navy)', borderRadius: 0,
+            padding: '13px 22px', fontFamily: 'var(--sans)', fontWeight: 700,
+            fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase',
+            cursor: 'pointer', marginTop: 8,
           }}
         >
           Try a different account
@@ -357,23 +366,25 @@
     }
 
     const inputSty = {
-      border: '1.5px solid var(--rule)', borderRadius: '5px 7px 4px 6px',
-      padding: '11px 13px', fontFamily: 'var(--pen)', fontSize: 15,
-      color: 'var(--ink)', background: 'rgba(255,255,255,0.75)',
+      border: '1px solid var(--rule)', borderRadius: 0,
+      padding: '12px 13px', fontFamily: 'var(--sans)', fontSize: 15,
+      color: 'var(--ink)', background: 'var(--card)',
       outline: 'none', width: '100%',
     };
     const btnPrimary = (disabled) => ({
-      padding: '12px 20px', borderRadius: '6px 8px 5px 7px',
-      border: 'none', background: 'var(--terracotta)', color: '#fff',
-      fontFamily: 'var(--pen)', fontSize: 15,
+      padding: '14px 20px', borderRadius: 0,
+      border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
+      fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13,
+      letterSpacing: '0.1em', textTransform: 'uppercase',
       cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? 0.55 : 1, width: '100%',
+      opacity: disabled ? 0.5 : 1, width: '100%',
       transition: 'opacity 0.15s',
     });
     const btnBack = {
       background: 'none', border: 'none',
-      fontFamily: 'var(--pen)', fontSize: 13,
-      color: 'var(--ink)', opacity: 0.45, cursor: 'pointer', textAlign: 'center',
+      fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11,
+      letterSpacing: '0.16em', textTransform: 'uppercase',
+      color: 'var(--ink-2)', cursor: 'pointer', textAlign: 'center',
     };
 
     return (
@@ -384,13 +395,14 @@
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            fontFamily: '"Cormorant Garamond", Garamond, serif',
-            fontWeight: 300, fontSize: 44, color: 'var(--clay)',
-            letterSpacing: '-0.04em',
-          }}>ours</div>
+            fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 46,
+            color: 'var(--navy)', letterSpacing: '-0.025em',
+            textTransform: 'uppercase', lineHeight: 0.92,
+          }}>Ours<span style={{ color: 'var(--accent)' }}>.</span></div>
           <div style={{
-            fontFamily: 'var(--pen)', fontSize: 13,
-            color: 'var(--ink)', opacity: 0.55, marginTop: 6,
+            fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11,
+            letterSpacing: '0.18em', textTransform: 'uppercase',
+            color: 'var(--ink-2)', marginTop: 10,
           }}>Hi {firstName} — one more step</div>
         </div>
 
@@ -401,15 +413,15 @@
               { m: 'join',   title: 'Join with a code',     sub: 'Your partner already set up — enter their code' },
             ].map(({ m, title, sub }) => (
               <button key={m} onClick={() => { setMode(m); setErr(''); }} style={{
-                padding: '14px 16px', borderRadius: '8px 10px 7px 9px',
-                border: '1.5px solid var(--rule)',
-                background: 'rgba(255,255,255,0.85)',
-                fontFamily: 'var(--pen)', fontSize: 14,
-                color: 'var(--ink)', cursor: 'pointer', textAlign: 'left',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                padding: '16px', borderRadius: 0,
+                border: '1px solid var(--rule)', borderLeft: '3px solid var(--accent)',
+                background: 'var(--card)',
+                fontFamily: 'var(--sans)', fontSize: 14,
+                color: 'var(--ink-soft)', cursor: 'pointer', textAlign: 'left',
+                boxShadow: 'none',
               }}>
-                <div style={{ fontWeight: 700, marginBottom: 3 }}>{title}</div>
-                <div style={{ fontSize: 12, opacity: 0.6 }}>{sub}</div>
+                <div style={{ fontWeight: 800, marginBottom: 4, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.02em', fontSize: 13 }}>{title}</div>
+                <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>{sub}</div>
               </button>
             ))}
           </div>
@@ -481,29 +493,32 @@
 
     return (
       <div style={{
-        background: 'rgba(195,145,105,0.12)',
-        border: '1px solid rgba(195,145,105,0.35)',
-        borderRadius: 8, padding: '10px 14px',
+        background: 'var(--card)',
+        border: '1px solid var(--rule)', borderLeft: '6px solid var(--accent)',
+        borderRadius: 0, padding: '12px 16px',
         display: 'flex', alignItems: 'center',
-        gap: 10, flexWrap: 'wrap',
+        gap: 12, flexWrap: 'wrap',
       }}>
         <div style={{
-          fontFamily: 'var(--pen)', fontSize: 12,
-          color: 'var(--ink)', opacity: 0.7, flex: 1, minWidth: 120,
+          fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11,
+          letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: 'var(--ink-2)', flex: 1, minWidth: 120,
         }}>
-          Share this code with your partner:
+          Share this code with your partner
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: 18, fontWeight: 600,
-            color: 'var(--terracotta)', letterSpacing: '0.18em',
+            fontFamily: 'var(--sans)', fontSize: 18, fontWeight: 900,
+            color: 'var(--navy)', letterSpacing: '0.18em',
           }}>{household.inviteCode}</span>
           <button onClick={copy} style={{
-            background: copied ? 'var(--olive)' : 'var(--terracotta)',
-            color: '#fff', border: 'none', borderRadius: 4,
-            padding: '4px 9px', fontFamily: 'var(--pen)', fontSize: 11,
-            cursor: 'pointer', transition: 'background 0.2s',
+            background: copied ? 'var(--navy)' : 'transparent',
+            color: copied ? 'var(--paper)' : 'var(--accent)',
+            border: `1px solid ${copied ? 'var(--navy)' : 'var(--accent)'}`,
+            borderRadius: 0, padding: '5px 10px',
+            fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            cursor: 'pointer', transition: 'all 0.3s',
           }}>{copied ? '✓ copied' : 'copy'}</button>
         </div>
       </div>
