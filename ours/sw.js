@@ -4,7 +4,7 @@
 // Bump this on every deploy that changes a same-origin file. Because the fetch
 // handler is cache-first, returning PWA users only pick up new code when the
 // cache name changes (the activate handler then deletes the old cache).
-const CACHE = 'ours-v3';
+const CACHE = 'ours-v4';
 
 // Files to pre-cache (app shell)
 const PRECACHE = [
@@ -14,7 +14,7 @@ const PRECACHE = [
   '/firebase-config.js',
   '/firebase-auth.jsx',
   '/visual-viewport.js',
-  '/projects/Pantry/wireframe-base.css',
+  '/shared/theme.css',
   '/projects/Pantry/',
   '/projects/Pantry/index.html',
   '/projects/Pantry/store.js',
