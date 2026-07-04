@@ -3,3 +3,12 @@ node_modules/
 *.log
 dist/
 package-lock.json
+
+# Planning / backlog docs — never publish
+**/BACKLOG.md
+**/TODO.md
+**/NOTES.md
+*.wip
+
+# Archives / build artifacts
+*.zip
