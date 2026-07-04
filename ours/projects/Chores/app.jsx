@@ -45,6 +45,7 @@ function frequencyLabel(freq) {
 // Ownership status derives from the fields: owned once someone claims it,
 // "needs owner" when suggested but unclaimed, otherwise unclaimed.
 function choreStatus(chore) {
+  if (chore.shared) return 'shared';          // everyone pitches in, no owner, no pay
   if (chore.owner) return 'claimed';
   if (chore.suggestedAssignee) return 'needs_owner';
   return 'unclaimed';
@@ -52,7 +53,7 @@ function choreStatus(chore) {
 
 // ─── Nav ────────────────────────────────────────────────────────────────────
 
-function Nav({ onAdd }) {
+function Nav({ onAdd, onData }) {
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 50,
@@ -69,6 +70,16 @@ function Nav({ onAdd }) {
         fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 16,
         letterSpacing: '0.02em', textTransform: 'uppercase', color: 'var(--paper)', flex: 1,
       }}>Our Chores</span>
+      <button
+        onClick={onData}
+        title="Import / Export"
+        style={{
+          padding: '8px 12px', borderRadius: 0,
+          border: '1px solid var(--paper)', background: 'transparent',
+          color: 'var(--paper)', fontFamily: 'var(--sans)', fontWeight: 700,
+          fontSize: 15, lineHeight: 1, cursor: 'pointer',
+        }}
+      >⋯</button>
       <button
         onClick={onAdd}
         style={{
@@ -95,8 +106,10 @@ function OwnershipPie({ chores, members }) {
     };
   }).filter(m => m.count > 0);
 
-  const unclaimed = chores.filter(c => !c.owner).length;
+  const shared    = chores.filter(c => c.shared).length;
+  const unclaimed = chores.filter(c => !c.owner && !c.shared).length;
   const slices = [...owned];
+  if (shared > 0)    slices.push({ id: '_shared',    name: 'Shared',    color: 'var(--navy)', count: shared,    weekly: 0 });
   if (unclaimed > 0) slices.push({ id: '_unclaimed', name: 'Unclaimed', color: 'var(--rule)', count: unclaimed, weekly: 0 });
 
   const total = chores.length;
@@ -152,6 +165,13 @@ function OwnershipPie({ chores, members }) {
 
 function OwnerBadge({ chore, members }) {
   const status = choreStatus(chore);
+  if (status === 'shared') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--navy)', whiteSpace: 'nowrap' }}>
+        <span style={{ width: 10, height: 10, background: 'var(--navy)', flexShrink: 0 }} />Shared
+      </span>
+    );
+  }
   if (status === 'claimed') {
     const m = members.find(x => x.id === chore.owner);
     return (
@@ -173,7 +193,8 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
   const status = choreStatus(chore);
   const owner  = members.find(m => m.id === chore.owner);
   const edge   = status === 'claimed' ? familyColorById(owner ? owner.colorId : '')
-              : status === 'needs_owner' ? 'var(--accent)' : 'var(--rule)';
+              : status === 'needs_owner' ? 'var(--accent)'
+              : status === 'shared' ? 'var(--navy)' : 'var(--rule)';
   const suggested = members.find(m => m.id === chore.suggestedAssignee);
 
   return (
@@ -203,7 +224,7 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
         </div>
 
         <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-          {Number(chore.allowanceWeekly) > 0 && (
+          {!chore.shared && Number(chore.allowanceWeekly) > 0 && (
             <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 15, color: 'var(--navy)', fontVariantNumeric: 'tabular-nums' }}>
               {fmtMoney(chore.allowanceWeekly)}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-2)' }}>/wk</span>
             </div>
@@ -244,7 +265,11 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
 
           {/* Ownership controls */}
           <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12 }}>
-            {status === 'claimed' ? (
+            {status === 'shared' ? (
+              <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+                Shared by everyone — no single owner, no pay. Just one of those realities.
+              </span>
+            ) : status === 'claimed' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)' }}>
                   Owned by <strong style={{ color: 'var(--navy)' }}>{owner ? owner.name : 'someone'}</strong>
@@ -298,6 +323,7 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
   const isNew = !chore.id;
   const [name,     setName]     = React.useState(chore.name || '');
   const [desc,     setDesc]     = React.useState(chore.description || '');
+  const [shared,   setShared]   = React.useState(!!chore.shared);
   const [allowance,setAllowance]= React.useState(chore.allowanceWeekly || '');
   const [estTime,  setEstTime]  = React.useState(chore.estimatedTime || '');
   const [category, setCategory] = React.useState(chore.category || '');
@@ -320,15 +346,16 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
     const data = {
       name: name.trim(),
       description: desc.trim(),
-      allowanceWeekly: allowance === '' ? 0 : Number(String(allowance).replace(/[^0-9.]/g, '')) || 0,
+      shared,
+      allowanceWeekly: shared ? 0 : (allowance === '' ? 0 : Number(String(allowance).replace(/[^0-9.]/g, '')) || 0),
       estimatedTime: estTime.trim(),
       category: category.trim(),
       frequency: buildFrequency(),
-      suggestedAssignee: assignee || '',
+      suggestedAssignee: shared ? '' : (assignee || ''),
       links: links.filter(l => (l.url || '').trim()),
     };
-    // Preserve owner/status when editing; new chores start unclaimed.
-    if (chore.id) { data.id = chore.id; data.owner = chore.owner || ''; }
+    // Shared chores have no owner; otherwise preserve owner when editing.
+    if (chore.id) { data.id = chore.id; data.owner = shared ? '' : (chore.owner || ''); }
     else { data.owner = ''; }
     onSave(data);
   }
@@ -382,20 +409,43 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
           <textarea className="notes-textarea" value={desc} onChange={e => setDesc(e.target.value)} placeholder="What does 'done' look like?" style={{ minHeight: 70 }} />
         </div>
 
-        {/* Allowance + estimated time */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-          <div>
-            <label style={label}>Weekly pay</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-soft)' }}>$</span>
-              <input className="text-input" type="number" min="0" value={allowance} onChange={e => setAllowance(e.target.value)} placeholder="0" style={{ paddingLeft: 22 }} />
-            </div>
-          </div>
-          <div>
+        {/* Shared toggle */}
+        <div style={{ marginBottom: 16 }}>
+          <button type="button" onClick={() => setShared(s => !s)} style={{
+            display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
+            padding: '12px 13px', borderRadius: 0, cursor: 'pointer',
+            border: `1px solid ${shared ? 'var(--accent)' : 'var(--rule)'}`,
+            background: shared ? 'color-mix(in oklch, var(--accent) 8%, transparent)' : 'var(--card)',
+          }}>
+            <span style={{ width: 18, height: 18, flexShrink: 0, border: `1px solid ${shared ? 'var(--accent)' : 'var(--navy)'}`, background: shared ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{shared ? '✓' : ''}</span>
+            <span>
+              <span style={{ display: 'block', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Shared chore</span>
+              <span style={{ display: 'block', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>Everyone pitches in — no single owner, no pay.</span>
+            </span>
+          </button>
+        </div>
+
+        {/* Allowance (hidden when shared) + estimated time */}
+        {shared ? (
+          <div style={{ marginBottom: 16 }}>
             <label style={label}>Est. time</label>
             <input className="text-input" value={estTime} onChange={e => setEstTime(e.target.value)} placeholder="20 min" />
           </div>
-        </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={label}>Weekly pay</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-soft)' }}>$</span>
+                <input className="text-input" type="number" min="0" value={allowance} onChange={e => setAllowance(e.target.value)} placeholder="0" style={{ paddingLeft: 22 }} />
+              </div>
+            </div>
+            <div>
+              <label style={label}>Est. time</label>
+              <input className="text-input" value={estTime} onChange={e => setEstTime(e.target.value)} placeholder="20 min" />
+            </div>
+          </div>
+        )}
 
         {/* Frequency */}
         <div style={{ marginBottom: 16 }}>
@@ -423,8 +473,8 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
           <input className="text-input" value={category} onChange={e => setCategory(e.target.value)} placeholder="Kitchen, outdoor, pets…" />
         </div>
 
-        {/* Suggested assignee */}
-        <div style={{ marginBottom: 16 }}>
+        {/* Suggested assignee (hidden when shared) */}
+        {!shared && <div style={{ marginBottom: 16 }}>
           <label style={label}>Suggested owner <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--ink-fade)' }}>(they still claim it)</span></label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {members.map(m => (
@@ -436,7 +486,7 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
             ))}
             <button onClick={handleAddMember} style={{ ...chip(false), borderStyle: 'dashed', color: 'var(--ink-2)' }}>＋ Add person</button>
           </div>
-        </div>
+        </div>}
 
         {/* Standards / links */}
         <div style={{ marginBottom: 20 }}>
@@ -482,7 +532,7 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
 
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
-function EmptyState({ onAdd }) {
+function EmptyState({ onAdd, onImport }) {
   return (
     <div style={{ textAlign: 'center', padding: '64px 24px' }}>
       <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 14 }}>
@@ -499,6 +549,133 @@ function EmptyState({ onAdd }) {
         border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
         fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
       }}>Create first chore</button>
+      <div style={{ marginTop: 16 }}>
+        <button onClick={onImport} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-2)' }}>
+          or import a list →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Import / export ─────────────────────────────────────────────────────────
+
+function choresToJson(chores) {
+  const clean = chores.map(c => ({
+    name: c.name || '', description: c.description || '', category: c.category || '',
+    shared: !!c.shared, allowanceWeekly: Number(c.allowanceWeekly) || 0,
+    estimatedTime: c.estimatedTime || '', frequency: c.frequency || { type: 'weekly' },
+    links: Array.isArray(c.links) ? c.links : [],
+  }));
+  return JSON.stringify({ ours_chores_export: 1, exportedAt: new Date().toISOString(), chores: clean }, null, 2);
+}
+
+// Owners/suggested-owners are stripped on import (member ids don't cross households).
+function jsonToChores(text) {
+  const data = JSON.parse(text);
+  const arr = Array.isArray(data) ? data : (data && data.chores) || [];
+  return arr.filter(c => c && c.name).map(c => ({
+    name: String(c.name).slice(0, 200), description: c.description || '', category: c.category || '',
+    shared: !!c.shared, allowanceWeekly: Number(c.allowanceWeekly) || 0,
+    estimatedTime: c.estimatedTime || '',
+    frequency: (c.frequency && c.frequency.type) ? c.frequency : { type: 'weekly' },
+    suggestedAssignee: '', owner: '',
+    links: Array.isArray(c.links) ? c.links.filter(l => l && l.url) : [],
+  }));
+}
+
+function downloadText(filename, text) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 120);
+}
+
+const dataSolidBtn   = { flex: 1, padding: '12px', borderRadius: 0, border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' };
+const dataOutlineBtn = { flex: 1, padding: '12px', borderRadius: 0, border: '1px solid var(--navy)', background: 'transparent', color: 'var(--navy)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' };
+
+function DataSheet({ chores, onImport, onClose }) {
+  const [tab, setTab]     = React.useState('export');
+  const [paste, setPaste] = React.useState('');
+  const [msg, setMsg]     = React.useState('');
+  const fileRef = React.useRef(null);
+  const exportText = React.useMemo(() => choresToJson(chores), [chores]);
+
+  function copyExport() {
+    navigator.clipboard.writeText(exportText).then(() => setMsg('Copied to clipboard.')).catch(() => setMsg('Copy failed — select the text and copy manually.'));
+  }
+  function doImport(text) {
+    try {
+      const defs = jsonToChores(text);
+      if (!defs.length) { setMsg('No chores found in that data.'); return; }
+      onImport(defs);
+      setMsg(`Imported ${defs.length} chore${defs.length === 1 ? '' : 's'}.`);
+      setTimeout(onClose, 700);
+    } catch (e) { setMsg('Could not read that — is it valid JSON?'); }
+  }
+  function onFile(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => doImport(String(r.result || ''));
+    r.readAsText(f);
+  }
+
+  const tabBtn = (id, txt) => (
+    <button onClick={() => { setTab(id); setMsg(''); }} style={{
+      flex: 1, padding: '10px', borderRadius: 0, cursor: 'pointer', border: 'none',
+      borderBottom: `2px solid ${tab === id ? 'var(--accent)' : 'var(--rule)'}`,
+      background: 'none', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12,
+      letterSpacing: '0.1em', textTransform: 'uppercase', color: tab === id ? 'var(--accent)' : 'var(--ink-2)',
+    }}>{txt}</button>
+  );
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0, padding: '20px 18px 32px', width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <span style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 22, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Import / Export<span style={{ color: 'var(--accent)' }}>.</span></span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--ink-fade)', padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ display: 'flex', marginBottom: 16 }}>
+          {tabBtn('export', 'Export')}
+          {tabBtn('import', 'Import')}
+        </div>
+
+        {tab === 'export' ? (
+          <div>
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, lineHeight: 1.5 }}>
+              Copy or download your chores as JSON — back them up, or share the list with another family to get them started.
+            </div>
+            <textarea readOnly value={exportText} className="notes-textarea" style={{ minHeight: 160, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={copyExport} style={dataSolidBtn}>Copy JSON</button>
+              <button onClick={() => downloadText('our-chores.json', exportText)} style={dataOutlineBtn}>Download</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, lineHeight: 1.5 }}>
+              Paste a chores JSON, or choose a file. Imported chores are added fresh — owners reset so your family claims their own.
+            </div>
+            <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder="Paste chores JSON here…" className="notes-textarea" style={{ minHeight: 140, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={() => doImport(paste)} style={dataSolidBtn}>Import pasted</button>
+              <button onClick={() => fileRef.current && fileRef.current.click()} style={dataOutlineBtn}>Choose file</button>
+              <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: 'none' }} />
+            </div>
+          </div>
+        )}
+
+        {msg && <div style={{ marginTop: 14, fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: 'var(--navy)' }}>{msg}</div>}
+      </div>
     </div>
   );
 }
@@ -513,6 +690,7 @@ function ChoresApp() {
   const [chores, setChores]       = React.useState(() => loadChoresLocal());
   const [sheet, setSheet]         = React.useState(null);
   const [expandedId, setExpanded] = React.useState(null);
+  const [dataOpen, setDataOpen]   = React.useState(false);
 
   React.useEffect(() => {
     if (!householdId) return;
@@ -551,17 +729,22 @@ function ChoresApp() {
     setChores(prev => prev.map(c => c.id === choreId ? { ...c, owner: '' } : c));
     updateChore(householdId, choreId, { owner: '' }).catch(console.error);
   }
+  function handleImport(defs) {
+    defs.forEach(d => addChore(householdId, d).catch(console.error));
+    // optimistic local add so imported chores show immediately (real ids arrive via onSnapshot)
+    setChores(prev => [...prev, ...defs.map(d => ({ ...d, id: generateId() }))]);
+  }
 
   // Order: needs-owner first, then unclaimed, then owned — surface the gaps.
-  const order = { needs_owner: 0, unclaimed: 1, claimed: 2 };
+  const order = { needs_owner: 0, unclaimed: 1, claimed: 2, shared: 3 };
   const sorted = [...chores].sort((a, b) => (order[choreStatus(a)] - order[choreStatus(b)]));
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', background: 'var(--paper)', minHeight: '100vh' }}>
-      <Nav onAdd={() => setSheet({})} />
+      <Nav onAdd={() => setSheet({})} onData={() => setDataOpen(true)} />
 
       {chores.length === 0 ? (
-        <EmptyState onAdd={() => setSheet({})} />
+        <EmptyState onAdd={() => setSheet({})} onImport={() => setDataOpen(true)} />
       ) : (
         <div style={{ paddingBottom: 48 }}>
           {/* Dashboard: who owns the work? */}
@@ -601,6 +784,10 @@ function ChoresApp() {
           onClose={() => setSheet(null)}
           onAddMember={addMember}
         />
+      )}
+
+      {dataOpen && (
+        <DataSheet chores={chores} onImport={handleImport} onClose={() => setDataOpen(false)} />
       )}
     </div>
   );
