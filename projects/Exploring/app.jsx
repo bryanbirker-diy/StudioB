@@ -6,10 +6,10 @@ const { AuthProvider: ExAuthProvider, useAuth: useExAuth } = window._oursAuth;
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const STATUSES = [
-  { id: 'dreaming',  label: 'Dreaming',  color: 'var(--ink-fade)',   bg: 'transparent',            border: 'var(--rule)' },
-  { id: 'planning',  label: 'Planning',  color: 'var(--ink)',        bg: 'rgba(195,145,105,0.18)', border: 'var(--clay)' },
-  { id: 'booked',    label: 'Booked',    color: '#fdf6ec',           bg: 'var(--terracotta)',       border: '#5a3a20' },
-  { id: 'done',      label: 'Done',      color: 'var(--ink-fade)',   bg: 'rgba(107,122,74,0.15)',  border: 'var(--olive)' },
+  { id: 'dreaming',  label: 'Dreaming',  color: 'var(--ink-fade)',   bg: 'transparent',                                      border: 'var(--rule)' },
+  { id: 'planning',  label: 'Planning',  color: 'var(--ink)',        bg: 'color-mix(in oklch, var(--navy) 8%, transparent)', border: 'var(--navy)' },
+  { id: 'booked',    label: 'Booked',    color: 'var(--accent-ink)', bg: 'var(--accent)',                                    border: 'var(--accent)' },
+  { id: 'done',      label: 'Done',      color: 'var(--ink-fade)',   bg: 'color-mix(in oklch, var(--navy) 6%, transparent)', border: 'var(--navy)' },
 ];
 
 const DURATION_PRESETS = [
@@ -181,22 +181,22 @@ function Nav({ tab, setTab, onAdd }) {
     <nav style={{
       position: 'sticky', top: 0, zIndex: 50,
       background: 'var(--paper)',
-      borderBottom: '1.5px solid var(--rule-soft)',
+      borderBottom: '1px solid var(--rule-soft)',
       display: 'flex', alignItems: 'center',
       padding: '10px 16px', gap: 10,
     }}>
       <a href="../../" style={{
-        fontFamily: '"Cormorant Garamond", Garamond, serif',
-        fontWeight: 300, fontSize: 15,
-        color: 'var(--clay)', textDecoration: 'none',
-        letterSpacing: '-0.01em', flexShrink: 0, opacity: 0.75,
+        fontFamily: 'var(--sans)',
+        fontWeight: 700, fontSize: 12,
+        color: 'var(--ink-2)', textDecoration: 'none',
+        letterSpacing: '0.16em', textTransform: 'uppercase', flexShrink: 0,
       }}>← ours</a>
 
       <div style={{
-        width: 28, height: 28, borderRadius: '7px 9px 6px 8px',
-        background: 'var(--terracotta)', border: '1.5px solid #5a3a20',
+        width: 28, height: 28, borderRadius: 0,
+        background: 'var(--terracotta)', border: '1px solid var(--accent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fdf6ec', fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 14,
+        color: 'var(--accent-ink)', fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 14,
         flexShrink: 0,
       }}>E</div>
 
@@ -218,7 +218,7 @@ function Nav({ tab, setTab, onAdd }) {
 function TabBar({ tab, setTab }) {
   return (
     <div style={{
-      display: 'flex', borderBottom: '1.5px solid var(--rule-soft)',
+      display: 'flex', borderBottom: '1px solid var(--rule-soft)',
       padding: '0 16px', background: 'var(--paper)',
     }}>
       {[['trips','→ Trips'],['calendar','◻ Calendar']].map(([id, label]) => (
@@ -244,7 +244,7 @@ function StatusBadge({ status }) {
       fontFamily: 'var(--mono)', fontSize: 10,
       letterSpacing: '0.08em', textTransform: 'uppercase',
       padding: '2px 8px',
-      borderRadius: '10px',
+      borderRadius: 0,
       background: s.bg, border: `1px solid ${s.border}`,
       color: s.color,
     }}>{s.label}</span>
@@ -261,16 +261,16 @@ function TripCard({ trip, onClick }) {
     <div
       onClick={onClick}
       style={{
-        border: '1.5px solid var(--rule-soft)',
+        border: '1px solid var(--rule-soft)',
         borderLeft: `4px solid ${urgency ? 'var(--terracotta)' : 'var(--rule-soft)'}`,
-        borderRadius: '0 10px 8px 0',
+        borderRadius: 0,
         padding: '14px 14px 14px 12px',
-        background: 'rgba(255,255,255,0.55)',
+        background: 'var(--card)',
         cursor: 'pointer',
         transition: 'background .12s',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.82)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--paper-2)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--card)'}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 18, color: 'var(--ink)', lineHeight: 1.1, flex: 1 }}>
@@ -306,7 +306,7 @@ function TripCard({ trip, onClick }) {
               color: 'var(--terracotta)', textDecoration: 'none',
               padding: '2px 8px',
               border: '1px solid var(--terracotta)',
-              borderRadius: 10, whiteSpace: 'nowrap',
+              borderRadius: 0, whiteSpace: 'nowrap',
             }}
           >+ Cal</a>
         )}
@@ -456,9 +456,9 @@ function CalendarView({ trips }) {
           return (
             <div key={cell.iso} style={{
               minHeight: 36, padding: '3px 2px',
-              borderRadius: 4,
-              background: isToday ? 'rgba(168,117,77,0.15)' : isSatSun ? 'rgba(0,0,0,0.02)' : 'transparent',
-              border: isToday ? '1.5px solid var(--terracotta)' : '1.5px solid transparent',
+              borderRadius: 0,
+              background: isToday ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : isSatSun ? 'var(--paper-2)' : 'transparent',
+              border: isToday ? '1px solid var(--terracotta)' : '1px solid transparent',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             }}>
               <span style={{
@@ -468,7 +468,7 @@ function CalendarView({ trips }) {
               }}>{cell.d}</span>
               {cell.trips.map((t, ti) => (
                 <div key={ti} style={{
-                  width: 6, height: 6, borderRadius: '50%',
+                  width: 6, height: 6, borderRadius: 0,
                   background: statusInfo(t.status).id === 'booked' ? 'var(--terracotta)' :
                               statusInfo(t.status).id === 'done'   ? 'var(--olive)' :
                               statusInfo(t.status).id === 'planning' ? 'var(--clay)' : 'var(--ink-fade)',
@@ -493,10 +493,10 @@ function CalendarView({ trips }) {
               const windows = findWindows(trip.targetDate, trip.duration, { windowType: trip.windowType, departTime: trip.departTime });
               return (
                 <div key={trip.id} style={{
-                  border: '1.5px solid var(--rule-soft)',
-                  borderRadius: '8px 10px 7px 9px',
+                  border: '1px solid var(--rule-soft)',
+                  borderRadius: 0,
                   padding: '12px 14px',
-                  background: 'rgba(255,255,255,0.45)',
+                  background: 'var(--card)',
                 }}>
                   <div style={{ fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', marginBottom: 4 }}>
                     {trip.name}
@@ -531,7 +531,7 @@ function CalendarView({ trips }) {
                                 textDecoration: 'none',
                                 padding: '2px 8px',
                                 border: '1px solid var(--terracotta)',
-                                borderRadius: 10,
+                                borderRadius: 0,
                                 whiteSpace: 'nowrap',
                               }}
                             >+ Cal</a>
@@ -548,7 +548,7 @@ function CalendarView({ trips }) {
           <div style={{
             marginTop: 14, padding: '10px 14px',
             border: '1px dashed var(--rule-soft)',
-            borderRadius: 8,
+            borderRadius: 0,
             fontFamily: 'var(--pen)', fontSize: 12,
             color: 'var(--ink-fade)', lineHeight: 1.5,
           }}>
@@ -609,11 +609,11 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(24,20,16,.48)', backdropFilter: 'blur(4px)',
+      background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
     }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
-        background: 'var(--paper)', borderRadius: '18px 18px 4px 4px',
+        background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,
         padding: '20px 18px 32px', width: '100%', maxWidth: 500,
         maxHeight: '92vh', overflowY: 'auto',
       }}>
@@ -669,9 +669,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 marginTop: 8, padding: '6px 14px',
-                border: '1.5px solid var(--terracotta)',
-                borderRadius: 20,
-                background: 'rgba(168,117,77,0.08)',
+                border: '1px solid var(--terracotta)',
+                borderRadius: 0,
+                background: 'color-mix(in oklch, var(--accent) 8%, transparent)',
                 fontFamily: 'var(--pen)', fontSize: 13,
                 color: 'var(--terracotta)', textDecoration: 'none',
               }}
@@ -693,9 +693,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
                 onClick={() => { setDuration(p.days); setCustom(false); }}
                 style={{
                   padding: '5px 12px',
-                  border: `1.5px solid ${!custom && duration === p.days ? 'var(--terracotta)' : 'var(--rule)'}`,
-                  borderRadius: '12px',
-                  background: !custom && duration === p.days ? 'rgba(168,117,77,0.12)' : 'transparent',
+                  border: `1px solid ${!custom && duration === p.days ? 'var(--terracotta)' : 'var(--rule)'}`,
+                  borderRadius: 0,
+                  background: !custom && duration === p.days ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'transparent',
                   fontFamily: 'var(--pen)', fontSize: 13,
                   color: !custom && duration === p.days ? 'var(--terracotta)' : 'var(--ink-soft)',
                   cursor: 'pointer',
@@ -706,9 +706,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
               onClick={() => setCustom(true)}
               style={{
                 padding: '5px 12px',
-                border: `1.5px solid ${custom ? 'var(--terracotta)' : 'var(--rule)'}`,
-                borderRadius: '12px',
-                background: custom ? 'rgba(168,117,77,0.12)' : 'transparent',
+                border: `1px solid ${custom ? 'var(--terracotta)' : 'var(--rule)'}`,
+                borderRadius: 0,
+                background: custom ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'transparent',
                 fontFamily: 'var(--pen)', fontSize: 13,
                 color: custom ? 'var(--terracotta)' : 'var(--ink-soft)',
                 cursor: 'pointer',
@@ -733,7 +733,7 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
         <div style={{
           margin: '4px -18px 16px',
           padding: '16px 18px',
-          background: 'rgba(168,117,77,0.06)',
+          background: 'var(--paper-2)',
           borderTop: '1px solid var(--rule-soft)',
           borderBottom: '1px solid var(--rule-soft)',
         }}>
@@ -751,9 +751,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
                 <button key={opt.id} onClick={() => setWindowType(opt.id)} style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px',
-                  border: `1.5px solid ${windowType === opt.id ? 'var(--terracotta)' : 'var(--rule)'}`,
-                  borderRadius: 20,
-                  background: windowType === opt.id ? 'rgba(168,117,77,0.14)' : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${windowType === opt.id ? 'var(--terracotta)' : 'var(--rule)'}`,
+                  borderRadius: 0,
+                  background: windowType === opt.id ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'var(--card)',
                   fontFamily: 'var(--pen)', fontSize: 13,
                   color: windowType === opt.id ? 'var(--terracotta)' : 'var(--ink-soft)',
                   cursor: 'pointer', transition: 'all .1s',
@@ -777,9 +777,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
                 <button key={opt.id} onClick={() => setDepartTime(opt.id)} style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px',
-                  border: `1.5px solid ${departTime === opt.id ? 'var(--terracotta)' : 'var(--rule)'}`,
-                  borderRadius: 20,
-                  background: departTime === opt.id ? 'rgba(168,117,77,0.14)' : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${departTime === opt.id ? 'var(--terracotta)' : 'var(--rule)'}`,
+                  borderRadius: 0,
+                  background: departTime === opt.id ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'var(--card)',
                   fontFamily: 'var(--pen)', fontSize: 13,
                   color: departTime === opt.id ? 'var(--terracotta)' : 'var(--ink-soft)',
                   cursor: 'pointer', transition: 'all .1s',
@@ -803,9 +803,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
                 <button key={opt.id} onClick={() => setWhosComing(opt.id)} style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px',
-                  border: `1.5px solid ${whosComing === opt.id ? 'var(--terracotta)' : 'var(--rule)'}`,
-                  borderRadius: 20,
-                  background: whosComing === opt.id ? 'rgba(168,117,77,0.14)' : 'rgba(255,255,255,0.5)',
+                  border: `1px solid ${whosComing === opt.id ? 'var(--terracotta)' : 'var(--rule)'}`,
+                  borderRadius: 0,
+                  background: whosComing === opt.id ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'var(--card)',
                   fontFamily: 'var(--pen)', fontSize: 13,
                   color: whosComing === opt.id ? 'var(--terracotta)' : 'var(--ink-soft)',
                   cursor: 'pointer', transition: 'all .1s',
@@ -867,9 +867,9 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
             {STATUSES.map(s => (
               <button key={s.id} onClick={() => setStatus(s.id)} style={{
                 padding: '5px 12px',
-                border: `1.5px solid ${status === s.id ? 'var(--terracotta)' : 'var(--rule)'}`,
-                borderRadius: 12,
-                background: status === s.id ? 'rgba(168,117,77,0.12)' : 'transparent',
+                border: `1px solid ${status === s.id ? 'var(--terracotta)' : 'var(--rule)'}`,
+                borderRadius: 0,
+                background: status === s.id ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'transparent',
                 fontFamily: 'var(--pen)', fontSize: 13,
                 color: status === s.id ? 'var(--terracotta)' : 'var(--ink-soft)',
                 cursor: 'pointer',

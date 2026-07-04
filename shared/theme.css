@@ -1,0 +1,449 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap");
+
+/* ═══════════════════════════════════════════════════════════════
+   ours — editorial platform theme
+   Single family (Archivo), near-monochrome navy + one sharp red.
+   Structure from lines, not boxes. Sharp corners, no shadows.
+   Class names are preserved from the previous system so every
+   surface (hub, Home, Money, Exploring, Pantry) restyles in place.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Ink & paper ─────────────────────────────────────────── */
+  --navy:      oklch(21% 0.045 262);   /* headlines, dark bars   */
+  --ink:       oklch(21% 0.045 262);   /* alias: primary ink     */
+  --ink-soft:  oklch(38% 0.012 262);   /* body text              */
+  --ink-2:     oklch(48% 0.012 262);   /* secondary text         */
+  --ink-fade:  oklch(60% 0.010 262);   /* muted / placeholder    */
+
+  --paper-2:   oklch(96.5% 0.004 260); /* page background        */
+  --paper:     oklch(99% 0.002 260);   /* card surface           */
+  --card:      oklch(99% 0.002 260);
+
+  --rule:      oklch(85% 0.008 262);   /* hairline               */
+  --rule-soft: oklch(88% 0.006 262);   /* faint hairline         */
+
+  /* ── One accent, used decisively ─────────────────────────── */
+  --accent:    oklch(56% 0.22 27);     /* sharp red              */
+  --accent-ink: oklch(99% 0.002 260);  /* text on accent         */
+
+  /* Legacy earth-tone hooks collapse to the two-tone system so
+     any markup still calling them stays on-palette. */
+  --brown:      var(--navy);
+  --olive:      var(--navy);
+  --clay:       var(--navy);
+  --terracotta: var(--accent);
+
+  /* ── Type ────────────────────────────────────────────────── */
+  --sans: "Archivo", system-ui, -apple-system, sans-serif;
+  --pen:  var(--sans);
+  --hand: var(--sans);
+  --mono: var(--sans);
+
+  /* ── Rhythm ──────────────────────────────────────────────── */
+  --gutter: 48px;
+  --maxw: 1140px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ─── Frames ─────────────────────────────────────────────────
+   Flat card surfaces. No radius, no texture, no shadow. */
+.wf {
+  font-family: var(--sans);
+  color: var(--ink-soft);
+  background: var(--paper);
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+}
+.wf-mobile  { font-size: 14px; }
+.wf-desktop { font-size: 14px; }
+
+/* ─── Boxes → flat hairline surfaces ─────────────────────────
+   Structure comes from a single 1px line, never a rounded box. */
+.box {
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--card);
+}
+.box-tight { border-radius: 0; }
+.box-soft  { border-color: var(--rule-soft); }
+.box-dashed { border-style: dashed; }
+
+/* Card with a flat 5px navy top-border; featured gets a 6px accent
+   left-border for imagery blocks. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-top: 5px solid var(--navy);
+  border-radius: 0;
+  padding: 24px;
+}
+.card-featured { border-top: 1px solid var(--rule); border-left: 6px solid var(--accent); }
+
+/* ─── Rules / dividers ───────────────────────────────────────
+   A hairline is the primary structural element. */
+.divider,
+.divider-wavy {
+  height: 1px;
+  background: var(--rule);
+  border-radius: 0;
+  background-image: none;
+  border: 0;
+}
+.rule-accent { height: 2px; background: var(--accent); }
+
+/* ─── Buttons — outlined, not filled ─────────────────────────
+   Default is a navy outline; hover shifts to the accent over 0.4s.
+   Solid variants read as decisive navy bars. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1px solid var(--navy);
+  border-radius: 0;
+  background: transparent;
+  color: var(--navy);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: color 0.4s var(--ease), border-color 0.4s var(--ease),
+              background-color 0.4s var(--ease);
+}
+.btn:hover { color: var(--accent); border-color: var(--accent); }
+.btn:active { transform: none; }
+
+/* Accent outline */
+.btn-accent { border-color: var(--accent); color: var(--accent); }
+.btn-accent:hover { background: var(--accent); color: var(--accent-ink); }
+
+/* Solid navy bar (legacy colored fills collapse here) */
+.btn-brown, .btn-olive, .btn-clay {
+  background: var(--navy); color: var(--accent-ink); border-color: var(--navy);
+}
+.btn-brown:hover, .btn-olive:hover, .btn-clay:hover {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+}
+.btn-terracotta {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
+.btn-ghost { background: transparent; border-color: transparent; box-shadow: none; }
+.btn-ghost:hover { color: var(--accent); }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+.btn-lg { padding: 12px 26px; font-size: 14px; }
+
+/* Back link — "← INDEX" text button */
+.back-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-2);
+  text-decoration: none; background: none; border: 0; cursor: pointer;
+  transition: color 0.4s var(--ease);
+}
+.back-link:hover { color: var(--accent); }
+
+/* ─── Form bits ──────────────────────────────────────────────── */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-family: var(--sans); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-2);
+}
+.input {
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  padding: 7px 2px;
+  font-family: var(--sans);
+  color: var(--ink);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.4s var(--ease);
+}
+.input:focus { border-bottom-color: var(--accent); }
+.input-box {
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 9px 12px;
+  background: var(--card);
+  font-family: var(--sans);
+  font-size: 15px;
+  transition: border-color 0.4s var(--ease);
+}
+.input-box:focus { border-color: var(--accent); outline: none; }
+.ghost-text { color: var(--ink-fade); font-style: normal; }
+
+/* ─── Headlines ──────────────────────────────────────────────
+   900, uppercase, tight, oversized. End key ones with an accent
+   period via <span class="dot">.</span> */
+.h-hand, .h1, .h2, .h3 {
+  font-family: var(--sans);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 0.96;
+  color: var(--navy);
+}
+/* Weight scales with size: big earns 900, small stays lighter. */
+.h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.025em; }
+.h2 { font-size: 25px; font-weight: 800; }
+.h3 { font-size: 19px; line-height: 1.05; font-weight: 700; letter-spacing: -0.01em; }
+.h-hand { font-size: 22px; font-weight: 800; }
+
+/* Hero display type */
+.display {
+  font-family: var(--sans);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.025em;
+  line-height: 0.92;
+  color: var(--navy);
+  font-size: clamp(48px, 7vw, 100px);
+}
+.dot { color: var(--accent); }
+
+/* Eyebrow label above sections */
+.eyebrow {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.note { font-family: var(--sans); font-size: 12px; color: var(--ink-2); }
+
+/* ─── Editorial index rows ───────────────────────────────────
+   Full-width rows split by hairlines:
+   oversized gray numeral | title + description | accent →. */
+.index-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 4px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.4s var(--ease);
+}
+.index-row:hover { background: color-mix(in oklch, var(--paper-2) 60%, transparent); }
+.index-num {
+  font-weight: 900;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+.index-title { font-weight: 700; font-size: 18px; color: var(--navy); text-transform: uppercase; letter-spacing: -0.01em; }
+.index-desc  { font-size: 14px; color: var(--ink-2); margin-top: 3px; }
+.index-arrow { color: var(--accent); font-size: 22px; transition: transform 0.4s var(--ease); }
+.index-row:hover .index-arrow { transform: translateX(4px); }
+
+/* ─── Layout helpers ─────────────────────────────────────────── */
+.row { display: flex; gap: 12px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.spread { display: flex; justify-content: space-between; align-items: center; }
+.fill { flex: 1; }
+.center { display: flex; align-items: center; justify-content: center; }
+.pad { padding: 18px; }
+.pad-sm { padding: 10px 12px; }
+.pad-lg { padding: 28px; }
+.shell { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); }
+@media (max-width: 640px) { .shell { padding: 0 20px; } :root { --gutter: 20px; } }
+
+/* ─── Progress ───────────────────────────────────────────────
+   Accent fill animating width. */
+.progress { height: 4px; background: var(--rule); border-radius: 0; overflow: hidden; }
+.progress-fill {
+  height: 100%; background: var(--accent); width: 0;
+  transition: width 0.6s var(--ease);
+}
+
+/* ─── Navigation chrome ──────────────────────────────────────
+   Sticky navy bar, white uppercase tracked text. */
+.navbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 14px var(--gutter);
+  background: var(--navy);
+  color: var(--paper);
+  border: 0;
+}
+.navbar a, .navbar .navlink {
+  color: var(--paper); text-decoration: none;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+  transition: color 0.4s var(--ease);
+}
+.navbar a:hover { color: var(--accent); }
+
+.statusbar {
+  display: flex; justify-content: space-between;
+  padding: 8px 14px 6px;
+  font-family: var(--sans); font-weight: 600; font-size: 11px;
+  letter-spacing: 0.04em; color: var(--ink-2);
+}
+.tabbar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; justify-content: space-around;
+  padding: 10px 12px 16px;
+  border-top: 1px solid var(--rule);
+  background: var(--card);
+  font-family: var(--sans); font-weight: 700; font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.tabbar .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink-fade); transition: color 0.4s var(--ease); }
+.tabbar .tab.active { color: var(--accent); }
+.tabbar .tab .dot { width: 16px; height: 16px; border: 1px solid currentColor; border-radius: 0; background: none; }
+
+/* ─── Desktop chrome ─────────────────────────────────────────── */
+.appbar {
+  display: flex; align-items: center;
+  padding: 14px var(--gutter);
+  background: var(--navy);
+  color: var(--paper);
+  gap: 20px;
+}
+.appbar, .appbar * { border-radius: 0; }
+.brand {
+  font-family: var(--sans); font-size: 18px; font-weight: 800;
+  letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper);
+  display: flex; align-items: center; gap: 10px;
+}
+.brand-mark {
+  width: 16px; height: 16px;
+  border: 0; border-radius: 0;
+  background: var(--accent);
+  display: inline-block;
+}
+
+/* ─── Calendar / slots ───────────────────────────────────────
+   Flat hairline cells; category shown by a left accent/navy edge. */
+.slot {
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  padding: 8px 10px;
+  background: var(--card);
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+.slot-filled { background: var(--card); border-color: var(--rule); }
+.slot-eatout { border-left: 3px solid var(--accent); background: var(--card); }
+.slot-adhoc  { border-left: 3px solid var(--navy); background: var(--card); }
+.slot-empty {
+  border-style: dashed;
+  color: var(--ink-fade);
+  font-style: normal;
+  justify-content: center;
+  align-items: center;
+}
+.slot .mealname { font-size: 13px; line-height: 1.15; color: var(--navy); font-weight: 600; }
+.slot .mealsides { font-size: 11px; color: var(--ink-2); }
+.slot .meta { font-family: var(--sans); font-size: 10px; color: var(--ink-fade); letter-spacing: 0.04em; }
+.slot-label {
+  font-family: var(--sans); font-weight: 700;
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ─── Chips ──────────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--card);
+  color: var(--ink-soft);
+}
+.chip-brown, .chip-olive { background: var(--navy); color: var(--accent-ink); border-color: var(--navy); }
+.chip-terracotta { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* ─── Checkboxes (accent) ────────────────────────────────────── */
+.check {
+  width: 16px; height: 16px;
+  border: 1px solid var(--navy);
+  border-radius: 0;
+  background: transparent;
+  flex: 0 0 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+}
+.check.checked { background: var(--accent); border-color: var(--accent); }
+.check.checked::after {
+  content: "✓";
+  color: var(--accent-ink);
+  margin-top: 0;
+  font-weight: 800;
+}
+.struck { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--ink-fade); }
+
+/* Legacy sketch decorations → plain editorial equivalents */
+.scribble { position: relative; color: var(--ink-fade); text-decoration: line-through; }
+.scribble::after { content: none; }
+.underline-sketch {
+  background-image: none;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 2px;
+}
+.callout {
+  position: absolute;
+  font-family: var(--sans); font-weight: 700;
+  font-size: 12px; letter-spacing: 0.04em;
+  color: var(--accent);
+  line-height: 1;
+  pointer-events: none;
+}
+.callout svg { position: absolute; }
+
+/* Placeholder image block — flat, hairline, no diagonal hatch */
+.placeholder-img {
+  border: 1px solid var(--rule);
+  border-left: 6px solid var(--accent);
+  border-radius: 0;
+  background: var(--paper-2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-weight: 700; font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-fade);
+  text-align: center;
+  padding: 6px;
+}
+
+/* Radio — square to match sharp-corner language */
+.radio { width: 14px; height: 14px; border: 1px solid var(--navy); border-radius: 0; display: inline-block; }
+.radio.on { background: var(--accent); border-color: var(--accent); }
+
+/* ─── Motion: scroll reveal ──────────────────────────────────
+   Add .reveal to elements; a shared observer adds .in on entry. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}

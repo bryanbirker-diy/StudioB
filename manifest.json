@@ -6,8 +6,8 @@
   "start_url": "https://theoursapp.com/",
   "scope": "https://theoursapp.com/",
   "display": "standalone",
-  "background_color": "#f5f0e8",
-  "theme_color": "#c39169",
+  "background_color": "#f2f2f4",
+  "theme_color": "#1b2436",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -35,6 +35,12 @@
       "short_name": "Exploring",
       "url": "/projects/Exploring/",
       "description": "Trips and adventures"
+    },
+    {
+      "name": "Our Chores",
+      "short_name": "Chores",
+      "url": "/projects/Chores/",
+      "description": "Who owns what around the house"
     }
   ]
 }

@@ -4,24 +4,27 @@ const { AuthProvider: MoneyAuthProvider, useAuth: useMoneyAuth } = window._oursA
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-const GOLD        = '#b5892e';
-const GOLD_BG     = 'rgba(181,137,46,0.12)';
-const GOLD_BORDER = 'rgba(181,137,46,0.35)';
+// The app's former "gold" now follows the platform accent, so Money
+// re-tints with the household's chosen color like every other surface.
+const GOLD        = 'var(--accent)';
+const GOLD_BG     = 'color-mix(in oklch, var(--accent) 12%, transparent)';
+const GOLD_BORDER = 'color-mix(in oklch, var(--accent) 35%, transparent)';
 
+// Data-viz palette: a navy monochrome ramp (near-mono, no extra hues).
 const BUDGET_COLORS = [
-  '#c39169', '#b5892e', '#a8754d', '#7a9a5a',
-  '#8a6f4e', '#d4956a', '#6b7a4a', '#c4a265',
+  'oklch(21% 0.045 262)', 'oklch(31% 0.035 262)', 'oklch(41% 0.030 262)', 'oklch(50% 0.025 262)',
+  'oklch(59% 0.020 262)', 'oklch(67% 0.016 262)', 'oklch(75% 0.012 262)', 'oklch(83% 0.008 262)',
 ];
 
 const DISMISSED_KEY   = 'mn_dismissed';
 const BUDGET_STARTERS = ['Groceries', 'Eating Out', 'Gas', 'Fun'];
 
 const CATS = [
-  { id: 'required',        label: 'Required',        emoji: '🏠', color: 'var(--terracotta)', bg: 'rgba(168,117,77,0.14)',  border: 'var(--terracotta)', desc: "Non-negotiables: rent, mortgage, utilities, phone. Life doesn't run without these." },
-  { id: 'protection',      label: 'Protection',      emoji: '🛡',  color: 'var(--olive)',      bg: 'rgba(107,122,74,0.14)',  border: 'var(--olive)',      desc: "Insurance, warranties, security. Money you hope you never need, but can't go without." },
-  { id: 'quality-of-life', label: 'Quality of Life', emoji: '✨', color: 'var(--clay)',       bg: 'rgba(195,145,105,0.16)', border: 'var(--clay)',       desc: 'Streaming, gym, subscriptions that make everyday life better. Worth it if you use it.' },
-  { id: 'growth',          label: 'Growth',          emoji: '🌱', color: '#4a7c5a',           bg: 'rgba(74,124,90,0.13)',   border: '#4a7c5a',           desc: 'Education, savings tools, investments. Spending today that pays dividends tomorrow.' },
-  { id: 'convenience',     label: 'Convenience',     emoji: '⚡', color: 'var(--brown)',      bg: 'rgba(138,111,78,0.13)', border: 'var(--brown)',      desc: 'Delivery, parking, time-savers. High scrutiny category — nice to have, easy to trim.' },
+  { id: 'required',        label: 'Required',        emoji: '🏠', color: 'oklch(24% 0.040 262)', bg: 'color-mix(in oklch, var(--navy) 8%, transparent)', border: 'oklch(24% 0.040 262)', desc: "Non-negotiables: rent, mortgage, utilities, phone. Life doesn't run without these." },
+  { id: 'protection',      label: 'Protection',      emoji: '🛡',  color: 'oklch(38% 0.030 262)', bg: 'color-mix(in oklch, var(--navy) 7%, transparent)', border: 'oklch(38% 0.030 262)', desc: "Insurance, warranties, security. Money you hope you never need, but can't go without." },
+  { id: 'quality-of-life', label: 'Quality of Life', emoji: '✨', color: 'oklch(50% 0.025 262)', bg: 'color-mix(in oklch, var(--navy) 6%, transparent)', border: 'oklch(50% 0.025 262)', desc: 'Streaming, gym, subscriptions that make everyday life better. Worth it if you use it.' },
+  { id: 'growth',          label: 'Growth',          emoji: '🌱', color: 'oklch(60% 0.020 262)', bg: 'color-mix(in oklch, var(--navy) 5%, transparent)', border: 'oklch(60% 0.020 262)', desc: 'Education, savings tools, investments. Spending today that pays dividends tomorrow.' },
+  { id: 'convenience',     label: 'Convenience',     emoji: '⚡', color: 'oklch(69% 0.016 262)', bg: 'color-mix(in oklch, var(--navy) 4%, transparent)', border: 'oklch(69% 0.016 262)', desc: 'Delivery, parking, time-savers. High scrutiny category — nice to have, easy to trim.' },
 ];
 
 const CYCLES = [
@@ -31,9 +34,9 @@ const CYCLES = [
 ];
 
 const STATUSES = [
-  { id: 'active',    label: 'Active',    color: 'var(--olive)',    bg: 'rgba(107,122,74,0.14)',  border: 'var(--olive)' },
-  { id: 'paused',    label: 'Paused',    color: 'var(--clay)',     bg: 'rgba(195,145,105,0.18)', border: 'var(--clay)' },
-  { id: 'cancelled', label: 'Cancelled', color: 'var(--ink-fade)', bg: 'transparent',            border: 'var(--rule)' },
+  { id: 'active',    label: 'Active',    color: 'var(--navy)',     bg: 'color-mix(in oklch, var(--navy) 8%, transparent)', border: 'var(--navy)' },
+  { id: 'paused',    label: 'Paused',    color: 'var(--ink-2)',    bg: 'var(--paper-2)',                                   border: 'var(--rule)' },
+  { id: 'cancelled', label: 'Cancelled', color: 'var(--ink-fade)', bg: 'transparent',                                      border: 'var(--rule)' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -97,22 +100,22 @@ function Nav({ onAdd }) {
     <nav style={{
       position: 'sticky', top: 0, zIndex: 50,
       background: 'var(--paper)',
-      borderBottom: '1.5px solid var(--rule-soft)',
+      borderBottom: '1px solid var(--rule-soft)',
       display: 'flex', alignItems: 'center',
       padding: '10px 16px', gap: 10,
     }}>
       <a href="../../" style={{
-        fontFamily: '"Cormorant Garamond", Garamond, serif',
-        fontWeight: 300, fontSize: 15,
-        color: 'var(--clay)', textDecoration: 'none',
-        letterSpacing: '-0.01em', flexShrink: 0, opacity: 0.75,
+        fontFamily: 'var(--sans)',
+        fontWeight: 700, fontSize: 12,
+        color: 'var(--ink-2)', textDecoration: 'none',
+        letterSpacing: '0.16em', textTransform: 'uppercase', flexShrink: 0,
       }}>← ours</a>
 
       <div style={{
-        width: 28, height: 28, borderRadius: '7px 9px 6px 8px',
-        background: GOLD, border: '1.5px solid #7a5c1a',
+        width: 28, height: 28, borderRadius: 0,
+        background: GOLD, border: '1px solid var(--accent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fdf9f0', fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 14,
+        color: 'var(--accent-ink)', fontFamily: 'var(--hand)', fontWeight: 700, fontSize: 14,
         flexShrink: 0,
       }}>$</div>
 
@@ -124,9 +127,9 @@ function Nav({ onAdd }) {
         onClick={onAdd}
         style={{
           padding: '5px 14px',
-          border: `1.5px solid ${GOLD}`,
-          borderRadius: '12px 14px 10px 13px',
-          background: GOLD, color: '#fdf9f0',
+          border: `1px solid ${GOLD}`,
+          borderRadius: 0,
+          background: GOLD, color: 'var(--accent-ink)',
           fontFamily: 'var(--pen)', fontSize: 13,
           cursor: 'pointer',
         }}
@@ -142,14 +145,14 @@ function CategoryInfoModal({ onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(24,20,16,.52)', backdropFilter: 'blur(4px)',
+        background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: 'var(--paper)', borderRadius: '14px 16px 12px 14px',
+        background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,
         padding: '22px 20px 24px', width: '100%', maxWidth: 440,
         maxHeight: '85vh', overflowY: 'auto',
       }}>
@@ -189,7 +192,7 @@ function StatusBadge({ status }) {
     <span style={{
       fontFamily: 'var(--mono)', fontSize: 10,
       letterSpacing: '0.07em', textTransform: 'uppercase',
-      padding: '2px 8px', borderRadius: 10,
+      padding: '2px 8px', borderRadius: 0,
       background: s.bg, border: `1px solid ${s.border}`,
       color: s.color, whiteSpace: 'nowrap',
     }}>{s.label}</span>
@@ -279,10 +282,10 @@ function WhereItGoes({ budget, onBudgetChange }) {
   return (
     <div style={{
       margin: '12px 16px 4px',
-      border: '1.5px solid var(--rule-soft)',
-      borderRadius: '8px 10px 7px 9px',
+      border: '1px solid var(--rule-soft)',
+      borderRadius: 0,
       overflow: 'hidden',
-      background: 'rgba(255,255,255,0.35)',
+      background: 'var(--card)',
     }}>
       {/* Collapse toggle */}
       <button
@@ -338,7 +341,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {budget.map((c, i) => (
                     <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, background: BUDGET_COLORS[i % BUDGET_COLORS.length], flexShrink: 0 }} />
+                      <div style={{ width: 8, height: 8, borderRadius: 0, background: BUDGET_COLORS[i % BUDGET_COLORS.length], flexShrink: 0 }} />
                       <span style={{ fontFamily: 'var(--pen)', fontSize: 11, color: 'var(--ink-soft)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-fade)' }}>{fmtMoney(parseFloat(c.amount) || 0, 0)}</span>
                     </div>
@@ -360,7 +363,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
             <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 4 }}>
               {budget.map((cat, i) => (
                 <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--rule-soft)' }}>
-                  <div style={{ width: 9, height: 9, borderRadius: 2, background: BUDGET_COLORS[i % BUDGET_COLORS.length], flexShrink: 0 }} />
+                  <div style={{ width: 9, height: 9, borderRadius: 0, background: BUDGET_COLORS[i % BUDGET_COLORS.length], flexShrink: 0 }} />
                   <span style={{ fontFamily: 'var(--pen)', fontSize: 14, color: 'var(--ink)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {cat.name}
                   </span>
@@ -374,7 +377,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
                         onChange={e => setEditVal(e.target.value)}
                         onBlur={() => commitEdit(cat.id)}
                         onKeyDown={e => { if (e.key === 'Enter') commitEdit(cat.id); if (e.key === 'Escape') setEditingId(null); }}
-                        style={{ width: 72, fontFamily: 'var(--mono)', fontSize: 13, border: `1.5px solid ${GOLD}`, borderRadius: 5, padding: '3px 6px', outline: 'none', background: 'rgba(255,255,255,0.85)', color: 'var(--ink)' }}
+                        style={{ width: 72, fontFamily: 'var(--mono)', fontSize: 13, border: `1px solid ${GOLD}`, borderRadius: 0, padding: '3px 6px', outline: 'none', background: 'var(--card)', color: 'var(--ink)' }}
                       />
                     </div>
                   ) : (
@@ -385,7 +388,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
                         fontFamily: 'var(--mono)', fontSize: 13,
                         color: parseFloat(cat.amount) > 0 ? GOLD : 'var(--ink-fade)',
                         background: 'none', border: 'none', cursor: 'pointer',
-                        padding: '2px 6px', borderRadius: 4,
+                        padding: '2px 6px', borderRadius: 0,
                         borderBottom: `1px dashed ${parseFloat(cat.amount) > 0 ? GOLD : 'var(--rule)'}`,
                       }}
                     >
@@ -413,7 +416,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
                   if (e.key === 'Enter') document.getElementById('wit-amt')?.focus();
                   if (e.key === 'Escape') { setShowAdd(false); setNewName(''); setNewAmt(''); }
                 }}
-                style={{ flex: 2, fontFamily: 'var(--pen)', fontSize: 13, border: '1.5px solid var(--rule)', borderRadius: 6, padding: '6px 9px', outline: 'none', background: 'rgba(255,255,255,0.75)', color: 'var(--ink)' }}
+                style={{ flex: 2, fontFamily: 'var(--pen)', fontSize: 13, border: '1px solid var(--rule)', borderRadius: 0, padding: '6px 9px', outline: 'none', background: 'var(--card)', color: 'var(--ink)' }}
               />
               <div style={{ position: 'relative', flex: 1 }}>
                 <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-soft)' }}>$</span>
@@ -427,10 +430,10 @@ function WhereItGoes({ budget, onBudgetChange }) {
                     if (e.key === 'Enter') addCategory();
                     if (e.key === 'Escape') { setShowAdd(false); setNewName(''); setNewAmt(''); }
                   }}
-                  style={{ width: '100%', fontFamily: 'var(--mono)', fontSize: 13, border: '1.5px solid var(--rule)', borderRadius: 6, padding: '6px 7px 6px 18px', outline: 'none', background: 'rgba(255,255,255,0.75)', color: 'var(--ink)' }}
+                  style={{ width: '100%', fontFamily: 'var(--mono)', fontSize: 13, border: '1px solid var(--rule)', borderRadius: 0, padding: '6px 7px 6px 18px', outline: 'none', background: 'var(--card)', color: 'var(--ink)' }}
                 />
               </div>
-              <button onClick={addCategory} style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', fontFamily: 'var(--pen)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
+              <button onClick={addCategory} style={{ background: GOLD, color: 'var(--accent-ink)', border: 'none', borderRadius: 0, padding: '6px 12px', fontFamily: 'var(--pen)', fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
                 Add
               </button>
             </div>
@@ -442,7 +445,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   padding: '5px 12px',
                   border: `1.5px dashed ${GOLD_BORDER}`,
-                  borderRadius: '12px 14px 10px 13px',
+                  borderRadius: 0,
                   background: 'transparent',
                   fontFamily: 'var(--pen)', fontSize: 13,
                   color: GOLD, cursor: 'pointer',
@@ -455,7 +458,7 @@ function WhereItGoes({ budget, onBudgetChange }) {
                   style={{
                     padding: '4px 10px',
                     border: '1px dashed var(--rule-soft)',
-                    borderRadius: 12,
+                    borderRadius: 0,
                     background: 'transparent',
                     fontFamily: 'var(--pen)', fontSize: 12,
                     color: 'var(--ink-fade)', cursor: 'pointer',
@@ -491,7 +494,7 @@ function SummaryBar({ expenses, onInfo }) {
       padding: '14px 16px',
       background: GOLD_BG,
       border: `1px solid ${GOLD_BORDER}`,
-      borderRadius: '8px 10px 7px 9px',
+      borderRadius: 0,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div>
@@ -510,7 +513,7 @@ function SummaryBar({ expenses, onInfo }) {
             onClick={onInfo}
             style={{
               background: 'none', border: `1px solid ${GOLD_BORDER}`,
-              borderRadius: 20, padding: '2px 9px',
+              borderRadius: 0, padding: '2px 9px',
               fontFamily: 'var(--mono)', fontSize: 10, cursor: 'pointer',
               color: GOLD,
             }}
@@ -525,7 +528,7 @@ function SummaryBar({ expenses, onInfo }) {
 
       {catTotals.length > 0 && (
         <div>
-          <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', gap: 1 }}>
+          <div style={{ display: 'flex', height: 8, borderRadius: 0, overflow: 'hidden', gap: 1 }}>
             {catTotals.map(cat => (
               <div key={cat.id} style={{ flex: cat.monthly / totalMonthly, background: cat.color, opacity: 0.75 }} />
             ))}
@@ -533,7 +536,7 @@ function SummaryBar({ expenses, onInfo }) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginTop: 8 }}>
             {catTotals.map(cat => (
               <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: cat.color, opacity: 0.75 }} />
+                <div style={{ width: 8, height: 8, borderRadius: 0, background: cat.color, opacity: 0.75 }} />
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-soft)' }}>
                   {cat.emoji} {cat.label} {fmtMoney(cat.monthly, 0)}/mo
                 </span>
@@ -549,10 +552,10 @@ function SummaryBar({ expenses, onInfo }) {
 // ─── Recommendations ──────────────────────────────────────────────────────
 
 const URGENCY_STYLE = {
-  high:   { border: 'var(--terracotta)', bg: 'rgba(168,117,77,0.07)', text: 'var(--ink-soft)' },
-  med:    { border: 'var(--clay)',       bg: 'rgba(195,145,105,0.07)', text: 'var(--ink-soft)' },
-  annual: { border: GOLD,               bg: GOLD_BG,                   text: 'var(--ink)' },
-  low:    { border: 'var(--rule)',       bg: 'transparent',             text: 'var(--ink-fade)' },
+  high:   { border: 'var(--accent)', bg: 'color-mix(in oklch, var(--accent) 7%, transparent)', text: 'var(--ink-soft)' },
+  med:    { border: 'var(--navy)',   bg: 'var(--paper-2)',                                     text: 'var(--ink-soft)' },
+  annual: { border: GOLD,            bg: GOLD_BG,                                              text: 'var(--ink)' },
+  low:    { border: 'var(--rule)',   bg: 'transparent',                                        text: 'var(--ink-fade)' },
 };
 
 function Recommendations({ expenses }) {
@@ -660,7 +663,7 @@ function Recommendations({ expenses }) {
               background: s.bg,
               border: '1px solid var(--rule-soft)',
               borderLeft: `3px solid ${s.border}`,
-              borderRadius: '0 8px 6px 0',
+              borderRadius: 0,
             }}>
               <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{tip.icon}</span>
               <span style={{ fontFamily: 'var(--pen)', fontSize: 13, color: s.text, lineHeight: 1.4, flex: 1 }}>
@@ -669,7 +672,7 @@ function Recommendations({ expenses }) {
                     fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.08em',
                     textTransform: 'uppercase', color: GOLD,
                     background: GOLD_BG, border: `1px solid ${GOLD_BORDER}`,
-                    borderRadius: 10, padding: '1px 6px',
+                    borderRadius: 0, padding: '1px 6px',
                     marginRight: 7, verticalAlign: 'middle',
                   }}>ANNUAL</span>
                 )}
@@ -701,17 +704,17 @@ function ExpenseCard({ expense, onClick }) {
     <div
       onClick={onClick}
       style={{
-        border: '1.5px solid var(--rule-soft)',
+        border: '1px solid var(--rule-soft)',
         borderLeft: `4px solid ${cat ? cat.color : 'var(--rule-soft)'}`,
-        borderRadius: '0 10px 8px 0',
+        borderRadius: 0,
         padding: '12px 14px 12px 12px',
-        background: 'rgba(255,255,255,0.55)',
+        background: 'var(--card)',
         cursor: 'pointer',
         opacity: isCancelled ? 0.55 : 1,
         transition: 'background .12s',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.82)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.55)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--paper-2)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--card)'}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -777,9 +780,9 @@ function ExpenseList({ expenses, onEdit, onAdd }) {
           onClick={onAdd}
           style={{
             padding: '10px 22px',
-            border: `1.5px solid ${GOLD}`,
-            borderRadius: '12px 14px 10px 13px',
-            background: GOLD, color: '#fdf9f0',
+            border: `1px solid ${GOLD}`,
+            borderRadius: 0,
+            background: GOLD, color: 'var(--accent-ink)',
             fontFamily: 'var(--pen)', fontSize: 14,
             cursor: 'pointer',
           }}
@@ -849,17 +852,17 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
   }
 
   const inputSty = {
-    border: '1.5px solid var(--rule)', borderRadius: '5px 7px 4px 6px',
+    border: '1px solid var(--rule)', borderRadius: 0,
     padding: '9px 12px', fontFamily: 'var(--pen)', fontSize: 14,
-    color: 'var(--ink)', background: 'rgba(255,255,255,0.7)',
+    color: 'var(--ink)', background: 'var(--card)',
     outline: 'none', width: '100%',
   };
 
   const chipBtn = (active, color = GOLD, border = GOLD) => ({
     display: 'inline-flex', alignItems: 'center', gap: 4,
-    padding: '5px 12px', border: `1.5px solid ${active ? border : 'var(--rule)'}`,
-    borderRadius: 20,
-    background: active ? 'rgba(181,137,46,0.14)' : 'rgba(255,255,255,0.5)',
+    padding: '5px 12px', border: `1px solid ${active ? border : 'var(--rule)'}`,
+    borderRadius: 0,
+    background: active ? 'color-mix(in oklch, var(--accent) 14%, transparent)' : 'var(--card)',
     fontFamily: 'var(--pen)', fontSize: 13,
     color: active ? color : 'var(--ink-soft)',
     cursor: 'pointer', transition: 'all .1s',
@@ -871,13 +874,13 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(24,20,16,.48)', backdropFilter: 'blur(4px)',
+        background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        background: 'var(--paper)', borderRadius: '18px 18px 4px 4px',
+        background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,
         padding: '20px 18px 36px', width: '100%', maxWidth: 500,
         maxHeight: '92vh', overflowY: 'auto',
       }}>
@@ -901,9 +904,9 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
               <button key={cat.id} onClick={() => setCategory(category === cat.id ? '' : cat.id)} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 padding: '5px 12px',
-                border: `1.5px solid ${category === cat.id ? cat.border : 'var(--rule)'}`,
-                borderRadius: 20,
-                background: category === cat.id ? cat.bg : 'rgba(255,255,255,0.5)',
+                border: `1px solid ${category === cat.id ? cat.border : 'var(--rule)'}`,
+                borderRadius: 0,
+                background: category === cat.id ? cat.bg : 'var(--card)',
                 fontFamily: 'var(--pen)', fontSize: 13,
                 color: category === cat.id ? cat.color : 'var(--ink-soft)',
                 cursor: 'pointer', transition: 'all .1s',
@@ -930,9 +933,9 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
                 {CYCLES.map(c => (
                   <button key={c.id} onClick={() => setCycle(c.id)} style={{
                     padding: '5px 10px', textAlign: 'left',
-                    border: `1.5px solid ${cycle === c.id ? GOLD : 'var(--rule)'}`,
-                    borderRadius: 8,
-                    background: cycle === c.id ? GOLD_BG : 'rgba(255,255,255,0.5)',
+                    border: `1px solid ${cycle === c.id ? GOLD : 'var(--rule)'}`,
+                    borderRadius: 0,
+                    background: cycle === c.id ? GOLD_BG : 'var(--card)',
                     fontFamily: 'var(--pen)', fontSize: 13,
                     color: cycle === c.id ? GOLD : 'var(--ink-soft)',
                     cursor: 'pointer',
@@ -942,7 +945,7 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
             </div>
           </div>
           {monthly > 0 && (
-            <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.55)', borderRadius: 6 }}>
+            <div style={{ padding: '8px 12px', background: 'var(--card)', borderRadius: 6 }}>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)' }}>
                 {fmtMoney(monthly, 2)}/mo · {fmtMoney(monthly * 12, 0)}/yr
               </span>
@@ -976,9 +979,9 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
             {STATUSES.map(s => (
               <button key={s.id} onClick={() => setStatus(s.id)} style={{
                 flex: 1, padding: '6px 0',
-                border: `1.5px solid ${status === s.id ? s.border : 'var(--rule)'}`,
-                borderRadius: 20,
-                background: status === s.id ? s.bg : 'rgba(255,255,255,0.5)',
+                border: `1px solid ${status === s.id ? s.border : 'var(--rule)'}`,
+                borderRadius: 0,
+                background: status === s.id ? s.bg : 'var(--card)',
                 fontFamily: 'var(--pen)', fontSize: 13,
                 color: status === s.id ? s.color : 'var(--ink-soft)',
                 cursor: 'pointer', transition: 'all .1s',
@@ -996,8 +999,8 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
 
         <button onClick={handleSave} style={{
           width: '100%', padding: '11px',
-          border: 'none', borderRadius: '6px 8px 5px 7px',
-          background: GOLD, color: '#fdf9f0',
+          border: 'none', borderRadius: 0,
+          background: GOLD, color: 'var(--accent-ink)',
           fontFamily: 'var(--pen)', fontSize: 15, cursor: 'pointer',
         }}>
           {isNew ? '＋ Add expense' : 'Save changes'}
@@ -1006,13 +1009,13 @@ function ExpenseSheet({ expense, memberNames, onSave, onDelete, onClose }) {
         {!isNew && (
           <div style={{ marginTop: 12 }}>
             {!confirmDel ? (
-              <button onClick={() => setConfirmDel(true)} style={{ width: '100%', padding: '8px', background: 'none', border: '1.5px solid var(--rule-soft)', borderRadius: '6px', fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-fade)', cursor: 'pointer' }}>
+              <button onClick={() => setConfirmDel(true)} style={{ width: '100%', padding: '8px', background: 'none', border: '1px solid var(--rule-soft)', borderRadius: 0, fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-fade)', cursor: 'pointer' }}>
                 Delete expense
               </button>
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => onDelete(expense.id)} style={{ flex: 1, padding: '8px', background: 'none', border: '1.5px solid var(--terracotta)', borderRadius: '6px', fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--terracotta)', cursor: 'pointer' }}>Yes, delete</button>
-                <button onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '8px', background: 'none', border: '1.5px solid var(--rule-soft)', borderRadius: '6px', fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-soft)', cursor: 'pointer' }}>Keep it</button>
+                <button onClick={() => onDelete(expense.id)} style={{ flex: 1, padding: '8px', background: 'none', border: '1px solid var(--terracotta)', borderRadius: 0, fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--terracotta)', cursor: 'pointer' }}>Yes, delete</button>
+                <button onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '8px', background: 'none', border: '1px solid var(--rule-soft)', borderRadius: 0, fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-soft)', cursor: 'pointer' }}>Keep it</button>
               </div>
             )}
           </div>
