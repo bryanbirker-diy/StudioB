@@ -8,10 +8,10 @@ function TopBar({ onOpenRecipes }) {
   return (
     <header className="app-topbar">
       <a href="../../" style={{
-        fontFamily: '"Cormorant Garamond", Garamond, serif',
-        fontWeight: 300, fontSize: 15,
-        color: 'var(--clay)', textDecoration: 'none',
-        letterSpacing: '-0.01em', flexShrink: 0, opacity: 0.75,
+        fontFamily: 'var(--sans)',
+        fontWeight: 700, fontSize: 12,
+        color: 'var(--ink-2)', textDecoration: 'none',
+        letterSpacing: '0.16em', textTransform: 'uppercase', flexShrink: 0,
       }} title="Back to ours">← ours</a>
       <div className="brand" style={{ flex: 1 }}>
         <span className="brand-mark" />
