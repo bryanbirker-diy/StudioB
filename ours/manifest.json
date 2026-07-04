@@ -35,6 +35,12 @@
       "short_name": "Exploring",
       "url": "/projects/Exploring/",
       "description": "Trips and adventures"
+    },
+    {
+      "name": "Our Chores",
+      "short_name": "Chores",
+      "url": "/projects/Chores/",
+      "description": "Who owns what around the house"
     }
   ]
 }

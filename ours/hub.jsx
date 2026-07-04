@@ -3,7 +3,8 @@
    The center column is identical at every width. */
 
 // ─── Auth imports (from shared firebase-auth.jsx) ─────────────────────────
-const { AuthProvider, useAuth, InviteCodeBanner, ACCENT_PRESETS, applyAccent } = window._oursAuth;
+const { AuthProvider, useAuth, InviteCodeBanner, ACCENT_PRESETS, applyAccent,
+  getFamilyMembers, FAMILY_COLORS, familyColorById, saveFamilyMembers } = window._oursAuth;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -141,6 +142,16 @@ const PRODUCTS = [
     border: 'var(--navy)',
     tagline: 'Subscriptions, bills, and where it goes.',
     href: 'projects/Money/',
+    live: true,
+  },
+  {
+    id: 'chores',
+    name: 'Our Chores',
+    letter: 'C',
+    color: 'var(--navy)',
+    border: 'var(--navy)',
+    tagline: 'Who owns what — and what it\'s worth.',
+    href: 'projects/Chores/',
     live: true,
   },
 ];
@@ -399,6 +410,7 @@ function LeftRail({ activeProduct, household, user }) {
                   {p.id === 'pantry' ? 'meals → groceries' :
                    p.id === 'exploring' ? 'fly, drive, hike' :
                    p.id === 'money' ? 'bills & subscriptions' :
+                   p.id === 'chores' ? 'who owns what' :
                    'projects & costs'}
                 </div>
               </div>
@@ -538,6 +550,26 @@ function SettingsView({ user, household }) {
     setTimeout(() => setCopied(false), 2500);
   }
 
+  // ── Family members (powers Our Chores ownership) ──
+  const [editColorFor, setEditColorFor] = React.useState(null);
+  const familyMembers = getFamilyMembers(household);
+  function persistFamily(updated) {
+    setHousehold(h => ({ ...(h || {}), familyMembers: updated }));
+    if (household && household.id) saveFamilyMembers(household.id, updated).catch(console.error);
+  }
+  function addFamilyMember() {
+    const nm = (prompt('Family member name?') || '').trim();
+    if (!nm) return;
+    const used = new Set(familyMembers.map(m => m.colorId));
+    const next = (FAMILY_COLORS.find(c => !used.has(c.id)) || FAMILY_COLORS[familyMembers.length % FAMILY_COLORS.length]).id;
+    persistFamily([...familyMembers, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: nm, colorId: next, linkedUid: null }]);
+  }
+  function renameFamilyMember(id) {
+    const nm = (prompt('New name?') || '').trim();
+    if (nm) persistFamily(familyMembers.map(m => m.id === id ? { ...m, name: nm } : m));
+  }
+  const familyTextBtn = { background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-2)', padding: 0 };
+
   const memberProfiles = household?.memberProfiles || {};
   const memberList     = Object.values(memberProfiles);
 
@@ -629,6 +661,37 @@ function SettingsView({ user, household }) {
                 />
               );
             })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Family (chore ownership) ── */}
+      <div style={card}>
+        <div style={cardHeader}>Family</div>
+        <div style={{ padding: '4px 0' }}>
+          <div style={{ padding: '6px 16px 10px', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+            Everyone who shares the work — including kids without their own login. Each gets a color used in Our Chores.
+          </div>
+          {familyMembers.map(m => (
+            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: '1px dotted var(--rule)' }}>
+              <button onClick={() => setEditColorFor(editColorFor === m.id ? null : m.id)} title="Change color"
+                style={{ width: 22, height: 22, background: familyColorById(m.colorId), border: '1px solid var(--rule)', borderRadius: 0, cursor: 'pointer', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--navy)' }}>{m.name}</span>
+              <button onClick={() => renameFamilyMember(m.id)} style={familyTextBtn}>Rename</button>
+              <button onClick={() => persistFamily(familyMembers.filter(x => x.id !== m.id))} style={{ ...familyTextBtn, color: 'var(--ink-fade)' }}>Remove</button>
+            </div>
+          ))}
+          {editColorFor && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '10px 16px', borderTop: '1px dotted var(--rule)' }}>
+              {FAMILY_COLORS.map(c => (
+                <button key={c.id} title={c.label}
+                  onClick={() => { persistFamily(familyMembers.map(m => m.id === editColorFor ? { ...m, colorId: c.id } : m)); setEditColorFor(null); }}
+                  style={{ width: 26, height: 26, background: c.color, border: '1px solid var(--rule)', borderRadius: 0, cursor: 'pointer' }} />
+              ))}
+            </div>
+          )}
+          <div style={{ padding: '12px 16px', borderTop: '1px dotted var(--rule)' }}>
+            <button onClick={addFamilyMember} style={{ ...familyTextBtn, color: 'var(--accent)' }}>＋ Add family member</button>
           </div>
         </div>
       </div>

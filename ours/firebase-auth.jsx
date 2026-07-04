@@ -51,6 +51,42 @@
   // Instant paint from cache, before React/household are ready.
   try { const c = localStorage.getItem('ours_accent'); if (c) applyAccent(c); } catch (e) {}
 
+  // ─── Family members (shared; powers Our Chores ownership) ───────────────────
+  // A household's people, including kids who don't sign in. Each gets a color
+  // from FAMILY_COLORS — muted, distinct hues that sit alongside navy + accent.
+  const FAMILY_COLORS = [
+    { id: 'slate', label: 'Slate', color: 'oklch(55% 0.075 250)' },
+    { id: 'clay',  label: 'Clay',  color: 'oklch(62% 0.095 55)'  },
+    { id: 'sage',  label: 'Sage',  color: 'oklch(62% 0.070 150)' },
+    { id: 'plum',  label: 'Plum',  color: 'oklch(53% 0.105 330)' },
+    { id: 'amber', label: 'Amber', color: 'oklch(72% 0.100 80)'  },
+    { id: 'teal',  label: 'Teal',  color: 'oklch(58% 0.080 200)' },
+    { id: 'rose',  label: 'Rose',  color: 'oklch(62% 0.110 20)'  },
+    { id: 'moss',  label: 'Moss',  color: 'oklch(56% 0.080 128)' },
+  ];
+  function familyColorById(id) {
+    return (FAMILY_COLORS.find(c => c.id === id) || FAMILY_COLORS[0]).color;
+  }
+  // Returns the household's family members. If none are saved yet, derive them
+  // from the sign-in member profiles (colors assigned in order) so Chores works
+  // out of the box; the first edit in Settings/Chores persists the real list.
+  function getFamilyMembers(household) {
+    if (household && Array.isArray(household.familyMembers) && household.familyMembers.length) {
+      return household.familyMembers;
+    }
+    const profiles = (household && household.memberProfiles) || {};
+    return Object.entries(profiles).map(([uid, p], i) => ({
+      id: uid,
+      name: (p && p.displayName) || 'Member',
+      colorId: FAMILY_COLORS[i % FAMILY_COLORS.length].id,
+      linkedUid: uid,
+    }));
+  }
+  async function saveFamilyMembers(householdId, members) {
+    if (!householdId || !db) return;
+    await db.doc(`households/${householdId}`).set({ familyMembers: members }, { merge: true });
+  }
+
   // One-time migration: move localStorage data into Firestore on first sign-in
   async function migrateLocalData(householdId) {
     if (localStorage.getItem('ours_migrated')) return;
@@ -739,6 +775,10 @@
     ACCENT_PRESETS,
     accentById,
     applyAccent,
+    FAMILY_COLORS,
+    familyColorById,
+    getFamilyMembers,
+    saveFamilyMembers,
   };
 
 })();
