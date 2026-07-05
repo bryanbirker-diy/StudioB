@@ -63,6 +63,47 @@ function balanceFor(ledger, memberId) {
   return ledger.reduce((s, e) => (e.memberId === memberId ? s + (Number(e.delta) || 0) : s), 0);
 }
 
+// ─── Cadence lock ───────────────────────────────────────────────────────────
+// A chore earns points once per its own frequency, then rests until the
+// window reopens — the thing that makes "Weekly" mean something, instead of
+// being tappable for points ten times in a row. Custom cadences are free text
+// ("when soil is dry") and can't be turned into an interval, so they're never
+// auto-locked — the family self-polices those.
+function frequencyIntervalDays(freq) {
+  if (!freq) return 7;
+  switch (freq.type) {
+    case 'daily':    return 1;
+    case 'weekly':   return 7;
+    case 'everyX':   return Math.max(1, Number(freq.everyXDays) || 1);
+    case 'monthly':  return 30;
+    case 'seasonal': return 90;
+    case 'custom':   return null;
+    default:         return 7;
+  }
+}
+
+function choreLock(chore) {
+  const days = frequencyIntervalDays(chore.frequency);
+  if (!days || !chore.lastCompletedAt) return { locked: false };
+  const unlockAt = Number(chore.lastCompletedAt) + days * 86400000;
+  if (Date.now() >= unlockAt) return { locked: false };
+  return { locked: true, unlockAt };
+}
+
+function fmtUnlock(unlockAt) {
+  const days = Math.ceil((unlockAt - Date.now()) / 86400000);
+  if (days <= 1) return 'tomorrow';
+  return `in ${days} days`;
+}
+
+function fmtLastDone(ts) {
+  if (!ts) return '';
+  const days = Math.floor((Date.now() - Number(ts)) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days}d ago`;
+}
+
 // ─── Nav ────────────────────────────────────────────────────────────────────
 
 function Nav({ onAdd, onData }) {
@@ -201,13 +242,16 @@ function OwnerBadge({ chore, members }) {
 
 // ─── Chore row (editorial index row, expandable) ─────────────────────────────
 
-function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEdit, onDone, bonusMult = 1 }) {
+function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEdit, onDone, onReset, bonusMult = 1 }) {
   const status = choreStatus(chore);
   const owner  = members.find(m => m.id === chore.owner);
   const edge   = status === 'claimed' ? familyColorById(owner ? owner.colorId : '')
               : status === 'needs_owner' ? 'var(--accent)'
               : status === 'shared' ? 'var(--navy)' : 'var(--rule)';
   const suggested = members.find(m => m.id === chore.suggestedAssignee);
+  const lock = choreLock(chore);
+  const lastBy = members.find(m => m.id === chore.lastCompletedBy);
+  const pts = chorePoints(chore) * bonusMult;
 
   return (
     <div style={{ borderBottom: '1px solid var(--rule)', borderLeft: `3px solid ${edge}` }}>
@@ -229,26 +273,41 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
             {chore.frequency && (
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-2)' }}>{frequencyLabel(chore.frequency)}</span>
             )}
-            {!chore.shared && chorePoints(chore) > 0 && (
-              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.02em' }}>{chorePoints(chore) * bonusMult} PTS{bonusMult > 1 ? ' ⚡' : ''}</span>
-            )}
             {chore.estimatedTime && (
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>{chore.estimatedTime}</span>
+            )}
+            {!chore.shared && chore.lastCompletedAt && (
+              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>
+                {lastBy ? `${lastBy.name} · ` : ''}{fmtLastDone(chore.lastCompletedAt)}
+              </span>
             )}
           </div>
         </div>
 
         {!chore.shared ? (
-          <button
-            onClick={e => { e.stopPropagation(); onDone(chore); }}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 12px', borderRadius: 0, cursor: 'pointer',
-              border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
-              fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}
-          >✓ Done</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            {pts > 0 && (
+              <div style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 18, color: 'var(--navy)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                {pts}<span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-2)' }}> pts</span>{bonusMult > 1 ? <span style={{ color: 'var(--accent)' }}> ⚡</span> : null}
+              </div>
+            )}
+            {lock.locked ? (
+              <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-fade)', whiteSpace: 'nowrap' }}>
+                Done · opens {fmtUnlock(lock.unlockAt)}
+              </div>
+            ) : (
+              <button
+                onClick={e => { e.stopPropagation(); onDone(chore); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 12px', borderRadius: 0, cursor: 'pointer',
+                  border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
+                  fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                }}
+              >✓ Done</button>
+            )}
+          </div>
         ) : <span />}
 
         <span style={{
@@ -280,6 +339,15 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
                   </a>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Resting: already earned this cadence */}
+          {lock.locked && (
+            <div style={{ background: 'var(--paper-2)', border: '1px solid var(--rule)', padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+              Already done this cadence{lastBy ? ` by ${lastBy.name}` : ''} — opens again {fmtUnlock(lock.unlockAt)}.
+              {' '}Did it happen again already? Use <strong style={{ color: 'var(--navy)' }}>Award points</strong> in Rewards for the extra,
+              {' '}or <button onClick={() => onReset(chore.id)} style={{ ...textBtn, display: 'inline', textTransform: 'none', letterSpacing: 0, fontWeight: 700, textDecoration: 'underline' }}>reset availability</button>.
             </div>
           )}
 
@@ -467,6 +535,9 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
         {/* Frequency */}
         <div style={{ marginBottom: 16 }}>
           <label style={label}>How often?</label>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', marginBottom: 8, lineHeight: 1.4 }}>
+            Points can be earned once per cadence — done once this week, it rests until next week.
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {FREQUENCIES.map(f => (
               <button key={f.id} onClick={() => setFreqType(f.id)} style={chip(freqType === f.id)}>{f.label}</button>
@@ -480,7 +551,12 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
             </div>
           )}
           {freqType === 'custom' && (
-            <input className="text-input" value={customLbl} onChange={e => setCustomLbl(e.target.value)} placeholder="e.g. Before guests visit" style={{ marginTop: 8 }} />
+            <>
+              <input className="text-input" value={customLbl} onChange={e => setCustomLbl(e.target.value)} placeholder="e.g. Before guests visit" style={{ marginTop: 8 }} />
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)', marginTop: 6, lineHeight: 1.4 }}>
+                Custom cadence isn't on a schedule, so it isn't auto-limited — it can be marked done anytime.
+              </div>
+            </>
           )}
         </div>
 
@@ -1089,8 +1165,16 @@ function ChoresApp() {
   function handleComplete(chore, member) {
     const pts = chorePoints(chore) * bonusMult;
     logLedger({ memberId: member.id, delta: pts, type: 'earn', reason: bonusMult > 1 ? `${bonusMult}× promo` : '', choreId: chore.id, choreName: chore.name });
+    const now = Date.now();
+    setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastCompletedAt: now, lastCompletedBy: member.id } : c));
+    updateChore(householdId, chore.id, { lastCompletedAt: now, lastCompletedBy: member.id }).catch(console.error);
     setCompleting(null);
     flash(`${member.name} earned ${pts} pts${bonusMult > 1 ? ` ⚡${bonusMult}×` : ''} ⭐`);
+  }
+  function handleResetLock(choreId) {
+    setChores(prev => prev.map(c => c.id === choreId ? { ...c, lastCompletedAt: null, lastCompletedBy: '' } : c));
+    updateChore(householdId, choreId, { lastCompletedAt: null, lastCompletedBy: '' }).catch(console.error);
+    flash('Availability reset');
   }
   function handleRedeem(reward, member) {
     logLedger({ memberId: member.id, delta: -(Number(reward.cost) || 0), type: 'redeem', reason: '', rewardId: reward.id, rewardName: reward.name, status: 'pending' });
@@ -1180,6 +1264,7 @@ function ChoresApp() {
                   onRelease={handleRelease}
                   onEdit={ch => { setExpanded(null); setSheet(ch); }}
                   onDone={ch => setCompleting(ch)}
+                  onReset={handleResetLock}
                 />
               ))}
             </div>
