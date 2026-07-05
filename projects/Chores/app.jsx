@@ -45,10 +45,22 @@ function frequencyLabel(freq) {
 // Ownership status derives from the fields: owned once someone claims it,
 // "needs owner" when suggested but unclaimed, otherwise unclaimed.
 function choreStatus(chore) {
-  if (chore.shared) return 'shared';          // everyone pitches in, no owner, no pay
+  if (chore.shared) return 'shared';          // everyone pitches in, no owner, no points
   if (chore.owner) return 'claimed';
   if (chore.suggestedAssignee) return 'needs_owner';
   return 'unclaimed';
+}
+
+// Points a chore is worth per completion. Falls back to the legacy weekly-$
+// value for chores created before the points switch, so nothing reads as zero.
+function chorePoints(chore) {
+  if (chore.points !== undefined && chore.points !== null && chore.points !== '') return Number(chore.points) || 0;
+  return Number(chore.allowanceWeekly) || 0;
+}
+
+// A member's points balance is the running sum of their ledger deltas.
+function balanceFor(ledger, memberId) {
+  return ledger.reduce((s, e) => (e.memberId === memberId ? s + (Number(e.delta) || 0) : s), 0);
 }
 
 // ─── Nav ────────────────────────────────────────────────────────────────────
@@ -152,7 +164,7 @@ function OwnershipPie({ chores, members }) {
             <span style={{ width: 12, height: 12, background: s.color, flexShrink: 0, border: s.id === '_unclaimed' ? '1px solid var(--rule)' : 'none' }} />
             <span style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13, color: 'var(--navy)', flex: 1, textTransform: 'uppercase', letterSpacing: '0.02em' }}>{s.name}</span>
             <span style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', fontVariantNumeric: 'tabular-nums' }}>
-              {s.count} · {Math.round((s.count / total) * 100)}%{s.weekly > 0 ? ` · ${fmtMoney(s.weekly)}/wk` : ''}
+              {s.count} · {Math.round((s.count / total) * 100)}%
             </span>
           </div>
         ))}
@@ -189,7 +201,7 @@ function OwnerBadge({ chore, members }) {
 
 // ─── Chore row (editorial index row, expandable) ─────────────────────────────
 
-function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEdit }) {
+function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEdit, onDone, bonusMult = 1 }) {
   const status = choreStatus(chore);
   const owner  = members.find(m => m.id === chore.owner);
   const edge   = status === 'claimed' ? familyColorById(owner ? owner.colorId : '')
@@ -212,10 +224,13 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
           <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 16, color: 'var(--navy)', lineHeight: 1.2 }}>
             {chore.name}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 4 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 4, alignItems: 'center' }}>
             <OwnerBadge chore={chore} members={members} />
             {chore.frequency && (
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-2)' }}>{frequencyLabel(chore.frequency)}</span>
+            )}
+            {!chore.shared && chorePoints(chore) > 0 && (
+              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.02em' }}>{chorePoints(chore) * bonusMult} PTS{bonusMult > 1 ? ' ⚡' : ''}</span>
             )}
             {chore.estimatedTime && (
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>{chore.estimatedTime}</span>
@@ -223,13 +238,18 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
           </div>
         </div>
 
-        <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-          {!chore.shared && Number(chore.allowanceWeekly) > 0 && (
-            <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 15, color: 'var(--navy)', fontVariantNumeric: 'tabular-nums' }}>
-              {fmtMoney(chore.allowanceWeekly)}<span style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-2)' }}>/wk</span>
-            </div>
-          )}
-        </div>
+        {!chore.shared ? (
+          <button
+            onClick={e => { e.stopPropagation(); onDone(chore); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 12px', borderRadius: 0, cursor: 'pointer',
+              border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
+              fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            }}
+          >✓ Done</button>
+        ) : <span />}
 
         <span style={{
           color: 'var(--accent)', fontSize: 18, lineHeight: 1,
@@ -324,7 +344,7 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
   const [name,     setName]     = React.useState(chore.name || '');
   const [desc,     setDesc]     = React.useState(chore.description || '');
   const [shared,   setShared]   = React.useState(!!chore.shared);
-  const [allowance,setAllowance]= React.useState(chore.allowanceWeekly || '');
+  const [points,   setPoints]   = React.useState(chore.points != null ? chore.points : (chore.allowanceWeekly != null ? chore.allowanceWeekly : ''));
   const [estTime,  setEstTime]  = React.useState(chore.estimatedTime || '');
   const [category, setCategory] = React.useState(chore.category || '');
   const [freqType, setFreqType] = React.useState((chore.frequency && chore.frequency.type) || 'weekly');
@@ -347,7 +367,7 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
       name: name.trim(),
       description: desc.trim(),
       shared,
-      allowanceWeekly: shared ? 0 : (allowance === '' ? 0 : Number(String(allowance).replace(/[^0-9.]/g, '')) || 0),
+      points: shared ? 0 : (points === '' ? 0 : Number(String(points).replace(/[^0-9.]/g, '')) || 0),
       estimatedTime: estTime.trim(),
       category: category.trim(),
       frequency: buildFrequency(),
@@ -434,11 +454,8 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={label}>Weekly pay</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-soft)' }}>$</span>
-                <input className="text-input" type="number" min="0" value={allowance} onChange={e => setAllowance(e.target.value)} placeholder="0" style={{ paddingLeft: 22 }} />
-              </div>
+              <label style={label}>Points <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--ink-fade)' }}>(per time done)</span></label>
+              <input className="text-input" type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} placeholder="0" />
             </div>
             <div>
               <label style={label}>Est. time</label>
@@ -563,7 +580,7 @@ function EmptyState({ onAdd, onImport }) {
 // editing, which is the point (unlike JSON, which nobody hand-edits). Legacy
 // JSON exports (from before this change) are still accepted on import.
 
-const CSV_HEADER = ['Chore Name', 'Description', 'Category', 'Shared', 'Weekly Pay', 'Estimated Time', 'Frequency', 'Every X Days', 'Links'];
+const CSV_HEADER = ['Chore Name', 'Description', 'Category', 'Shared', 'Points', 'Estimated Time', 'Frequency', 'Every X Days', 'Links'];
 
 function csvEscape(val) {
   const s = String(val === undefined || val === null ? '' : val);
@@ -602,7 +619,7 @@ function choresToCsv(chores) {
     rows.push([
       c.name || '', c.description || '', c.category || '',
       c.shared ? 'Yes' : 'No',
-      c.shared ? '' : (Number(c.allowanceWeekly) || 0),
+      c.shared ? '' : chorePoints(c),
       c.estimatedTime || '',
       freqCell, everyXCell,
       linksToCsvCell(c.links),
@@ -641,7 +658,7 @@ function csvToChores(text) {
   const iDesc  = col('description');
   const iCat   = col('category');
   const iShared= col('shared');
-  const iPay   = col('weekly pay', 'allowance', 'pay');
+  const iPay   = col('points', 'weekly pay', 'allowance', 'pay');
   const iTime  = col('estimated time', 'time');
   const iFreq  = col('frequency');
   const iEveryX= col('every x days');
@@ -669,7 +686,7 @@ function csvToChores(text) {
       description: get(cells, iDesc),
       category: get(cells, iCat),
       shared,
-      allowanceWeekly: shared ? 0 : (Number(String(get(cells, iPay)).replace(/[^0-9.]/g, '')) || 0),
+      points: shared ? 0 : (Number(String(get(cells, iPay)).replace(/[^0-9.]/g, '')) || 0),
       estimatedTime: get(cells, iTime),
       frequency,
       suggestedAssignee: '', owner: '',
@@ -794,22 +811,237 @@ function DataSheet({ chores, onImport, onClose }) {
   );
 }
 
+// ─── Points: completion, rewards, wallet ─────────────────────────────────────
+
+function Modal({ title, onClose, children, maxWidth = 460 }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0, padding: '20px 18px 28px', width: '100%', maxWidth, maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <span style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 20, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>{title}<span style={{ color: 'var(--accent)' }}>.</span></span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--ink-fade)', padding: 4 }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const eyebrow    = { fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 };
+const primaryBtn = { padding: '11px 16px', borderRadius: 0, border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' };
+const smallBtn   = { padding: '7px 12px', borderRadius: 0, border: '1px solid var(--navy)', background: 'transparent', color: 'var(--navy)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap' };
+
+function MemberChip({ m, onClick, disabled, suffix, highlight }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 0,
+      cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1,
+      border: `1px solid ${highlight ? 'var(--accent)' : 'var(--rule)'}`, background: 'var(--card)',
+      fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.02em',
+    }}>
+      <span style={{ width: 12, height: 12, background: familyColorById(m.colorId), flexShrink: 0 }} />{m.name}{suffix ? <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}> · {suffix}</span> : null}
+    </button>
+  );
+}
+
+function CompletionSheet({ chore, members, bonusMult = 1, onComplete, onClose }) {
+  const pts = chorePoints(chore) * bonusMult;
+  const ordered = [...members].sort((a, b) => (a.id === chore.owner ? -1 : b.id === chore.owner ? 1 : 0));
+  return (
+    <Modal title="Who did it?" onClose={onClose}>
+      <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
+        <strong style={{ color: 'var(--navy)' }}>{chore.name}</strong> — earns <strong style={{ color: 'var(--accent)' }}>{pts} pts</strong>{bonusMult > 1 ? <span style={{ color: 'var(--accent)', fontWeight: 800 }}> ⚡{bonusMult}×</span> : null}. Tap who did it.
+      </div>
+      {members.length === 0 ? (
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-fade)' }}>Add family members first (hub Settings → Family).</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {ordered.map(m => <MemberChip key={m.id} m={m} highlight={m.id === chore.owner} onClick={() => onComplete(chore, m)} />)}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function RedeemSheet({ reward, members, ledger, onRedeem, onClose }) {
+  const noneAfford = members.length > 0 && members.every(m => balanceFor(ledger, m.id) < reward.cost);
+  return (
+    <Modal title="Redeem" onClose={onClose}>
+      <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
+        <strong style={{ color: 'var(--navy)' }}>{reward.name}</strong> costs <strong style={{ color: 'var(--accent)' }}>{reward.cost} pts</strong>. Who's cashing in?
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {members.map(m => {
+          const bal = balanceFor(ledger, m.id);
+          return <MemberChip key={m.id} m={m} disabled={bal < reward.cost} suffix={`${bal} pts`} onClick={() => onRedeem(reward, m)} />;
+        })}
+      </div>
+      {noneAfford && <div style={{ marginTop: 12, fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-fade)' }}>Nobody has enough points for this yet.</div>}
+    </Modal>
+  );
+}
+
+function RewardEditSheet({ reward, onSave, onDelete, onClose }) {
+  const isNew = !reward.id;
+  const [name, setName] = React.useState(reward.name || '');
+  const [cost, setCost] = React.useState(reward.cost != null ? reward.cost : '');
+  const label = { fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-2)', display: 'block', marginBottom: 8 };
+  return (
+    <Modal title={isNew ? 'New reward' : 'Edit reward'} onClose={onClose}>
+      <div style={{ marginBottom: 16 }}>
+        <label style={label}>Reward</label>
+        <input className="text-input" value={name} onChange={e => setName(e.target.value)} placeholder="Movie night, 1 hr screen time, $10 cash…" autoFocus />
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <label style={label}>Cost (points)</label>
+        <input className="text-input" type="number" min="0" value={cost} onChange={e => setCost(e.target.value)} placeholder="100" />
+      </div>
+      <button onClick={() => { if (!name.trim()) return; onSave({ id: reward.id, name: name.trim(), cost: Number(cost) || 0 }); }} style={{ ...primaryBtn, width: '100%', padding: '14px' }}>{isNew ? 'Add reward' : 'Save'}</button>
+      {!isNew && (
+        <button onClick={() => onDelete(reward.id)} style={{ width: '100%', marginTop: 10, padding: '10px', background: 'none', border: '1px solid var(--rule)', borderRadius: 0, fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-fade)', cursor: 'pointer' }}>Delete reward</button>
+      )}
+    </Modal>
+  );
+}
+
+function AdjustSheet({ member, onAdjust, onClose }) {
+  const [amount, setAmount] = React.useState('');
+  const [reason, setReason] = React.useState('');
+  const [dir, setDir]       = React.useState('add');   // give is the common case
+  const label = { fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-2)', display: 'block', marginBottom: 8 };
+  const dirBtn = (id, txt) => (
+    <button onClick={() => setDir(id)} style={{ flex: 1, padding: '10px', borderRadius: 0, cursor: 'pointer', border: `1px solid ${dir === id ? 'var(--accent)' : 'var(--rule)'}`, background: dir === id ? 'color-mix(in oklch, var(--accent) 10%, transparent)' : 'var(--card)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--navy)' }}>{txt}</button>
+  );
+  return (
+    <Modal title="Award points" onClose={onClose}>
+      <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
+        Give <strong style={{ color: 'var(--navy)' }}>{member.name}</strong> bonus points for help that isn't a tracked chore — carrying groceries, a hand with dinner — or dock points for a job left half-done.
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>{dirBtn('add', '＋ Give')}{dirBtn('subtract', '− Dock')}</div>
+      <div style={{ marginBottom: 14 }}><label style={label}>Points</label><input className="text-input" type="number" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="20" autoFocus /></div>
+      <div style={{ marginBottom: 20 }}><label style={label}>Reason (optional)</label><input className="text-input" value={reason} onChange={e => setReason(e.target.value)} placeholder="Helped carry the groceries" /></div>
+      <button onClick={() => { const a = Number(amount) || 0; if (!a) return; onAdjust(member, dir === 'subtract' ? -a : a, reason.trim(), dir === 'subtract' ? 'dock' : 'award'); }} style={{ ...primaryBtn, width: '100%', padding: '14px' }}>{dir === 'subtract' ? 'Dock points' : 'Give points'}</button>
+    </Modal>
+  );
+}
+
+function RewardsView({ members, ledger, rewards, onRedeemClick, onFulfill, onAddReward, onEditReward, onAdjustClick }) {
+  const pending = ledger.filter(e => e.type === 'redeem' && e.status === 'pending');
+  const nameOf  = id => (members.find(m => m.id === id) || {}).name || 'someone';
+  const colorOf = id => familyColorById((members.find(m => m.id === id) || {}).colorId);
+
+  return (
+    <div style={{ paddingBottom: 48 }}>
+      {/* Wallets */}
+      <div style={{ padding: '22px 16px 4px' }}>
+        <div style={eyebrow}>Points wallet</div>
+        {members.length === 0 ? (
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-fade)', paddingBottom: 8 }}>Add family members in the hub Settings → Family to start tracking points.</div>
+        ) : members.map(m => (
+          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--rule)' }}>
+            <span style={{ width: 14, height: 14, background: familyColorById(m.colorId), flexShrink: 0 }} />
+            <span style={{ flex: 1, fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 16, color: 'var(--navy)' }}>{m.name}</span>
+            <span style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 22, color: 'var(--navy)', fontVariantNumeric: 'tabular-nums' }}>{balanceFor(ledger, m.id)}<span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)' }}> pts</span></span>
+            <button onClick={() => onAdjustClick(m)} style={{ ...smallBtn, border: '1px solid var(--rule)', color: 'var(--ink-2)' }}>Award</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Pending deliveries */}
+      {pending.length > 0 && (
+        <div style={{ padding: '22px 16px 4px' }}>
+          <div style={eyebrow}>To deliver</div>
+          {pending.map(e => (
+            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--rule)' }}>
+              <span style={{ width: 12, height: 12, background: colorOf(e.memberId), flexShrink: 0 }} />
+              <span style={{ flex: 1, fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--navy)' }}><strong>{nameOf(e.memberId)}</strong> redeemed {e.rewardName}</span>
+              <button onClick={() => onFulfill(e.id)} style={{ ...smallBtn, background: 'var(--navy)', color: 'var(--paper)' }}>Mark given</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Reward menu */}
+      <div style={{ padding: '22px 16px 4px' }}>
+        <div style={eyebrow}>Reward menu</div>
+        {rewards.length === 0 ? (
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
+            Set what points can buy — screen time, a movie night, $10 cash, a later bedtime. Everyone earns the same points; the menu is where they spend them.
+          </div>
+        ) : rewards.map(r => (
+          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onEditReward(r)}>
+              <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 15, color: 'var(--navy)' }}>{r.name}</div>
+              <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12, color: 'var(--accent)', marginTop: 2 }}>{r.cost} pts</div>
+            </div>
+            <button onClick={() => onRedeemClick(r)} style={{ ...smallBtn, background: 'var(--navy)', color: 'var(--paper)' }}>Redeem</button>
+          </div>
+        ))}
+        <button onClick={onAddReward} style={{ ...smallBtn, border: '1px dashed var(--accent)', color: 'var(--accent)', marginTop: 14 }}>＋ Add reward</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── App root ────────────────────────────────────────────────────────────────
 
+function BonusSheet({ bonus, onSave, onClose }) {
+  const [mult, setMult]   = React.useState(bonus.multiplier > 1 ? bonus.multiplier : 2);
+  const [label, setLabel] = React.useState(bonus.label || '');
+  const lbl = { fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-2)', display: 'block', marginBottom: 8 };
+  const multBtn = n => (
+    <button onClick={() => setMult(n)} style={{ flex: 1, padding: '14px', borderRadius: 0, cursor: 'pointer', border: `1px solid ${mult === n ? 'var(--accent)' : 'var(--rule)'}`, background: mult === n ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'var(--card)', fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 18, color: 'var(--navy)' }}>{n}×</button>
+  );
+  return (
+    <Modal title="Points promo" onClose={onClose}>
+      <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 16, lineHeight: 1.5 }}>
+        Run a limited-time multiplier to spark a push — like a double-points weekend cleaning sprint. Every chore completed earns the boosted amount until you end it.
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <label style={lbl}>Multiplier</label>
+        <div style={{ display: 'flex', gap: 8 }}>{multBtn(2)}{multBtn(3)}</div>
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <label style={lbl}>Name (optional)</label>
+        <input className="text-input" value={label} onChange={e => setLabel(e.target.value)} placeholder="Weekend cleaning sprint" />
+      </div>
+      <button onClick={() => onSave({ active: true, multiplier: Number(mult) || 2, label: label.trim() })} style={{ ...primaryBtn, width: '100%', padding: '14px' }}>{bonus.active ? 'Update promo' : 'Start promo'}</button>
+      {bonus.active && (
+        <button onClick={() => onSave({ active: false, multiplier: Number(mult) || 2, label: label.trim() })} style={{ width: '100%', marginTop: 10, padding: '10px', background: 'none', border: '1px solid var(--rule)', borderRadius: 0, fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-fade)', cursor: 'pointer' }}>End promo</button>
+      )}
+    </Modal>
+  );
+}
+
 function ChoresApp() {
-  const { household, setHousehold } = useChoresAuth();
+  const { user, household, setHousehold } = useChoresAuth();
   const householdId = household && household.id;
-  const members = getFamilyMembers(household);
+  const members  = getFamilyMembers(household);
+  const rewards  = (household && Array.isArray(household.rewards)) ? household.rewards : [];
+  const bonus    = (household && household.pointsBonus) || { active: false, multiplier: 1, label: '' };
+  const bonusMult = bonus.active ? (Number(bonus.multiplier) || 1) : 1;
 
   const [chores, setChores]       = React.useState(() => loadChoresLocal());
+  const [ledger, setLedger]       = React.useState(() => loadLedgerLocal());
+  const [view, setView]           = React.useState('chores');
   const [sheet, setSheet]         = React.useState(null);
   const [expandedId, setExpanded] = React.useState(null);
   const [dataOpen, setDataOpen]   = React.useState(false);
+  const [completing, setCompleting] = React.useState(null);
+  const [redeeming, setRedeeming]   = React.useState(null);
+  const [rewardEdit, setRewardEdit] = React.useState(null);
+  const [adjusting, setAdjusting]   = React.useState(null);
+  const [bonusOpen, setBonusOpen]   = React.useState(false);
+  const [toast, setToast]           = React.useState('');
 
   React.useEffect(() => {
     if (!householdId) return;
-    return subscribeChores(householdId, setChores);
+    const u1 = subscribeChores(householdId, setChores);
+    const u2 = subscribeLedger(householdId, setLedger);
+    return () => { u1 && u1(); u2 && u2(); };
   }, [householdId]);
+
+  function flash(msg) { setToast(msg); setTimeout(() => setToast(t => (t === msg ? '' : t)), 2400); }
 
   function addMember(name) {
     const used = new Set(members.map(m => m.colorId));
@@ -845,63 +1077,143 @@ function ChoresApp() {
   }
   function handleImport(defs) {
     defs.forEach(d => addChore(householdId, d).catch(console.error));
-    // optimistic local add so imported chores show immediately (real ids arrive via onSnapshot)
     setChores(prev => [...prev, ...defs.map(d => ({ ...d, id: generateId() }))]);
   }
 
-  // Order: needs-owner first, then unclaimed, then owned — surface the gaps.
+  // ── Points ledger ──
+  function logLedger(entry) {
+    const e = { ...entry, by: (user && user.displayName) || '' };
+    addLedgerEntry(householdId, e).catch(console.error);
+    setLedger(prev => [...prev, { ...e, id: generateId(), createdAt: Date.now() }]); // optimistic
+  }
+  function handleComplete(chore, member) {
+    const pts = chorePoints(chore) * bonusMult;
+    logLedger({ memberId: member.id, delta: pts, type: 'earn', reason: bonusMult > 1 ? `${bonusMult}× promo` : '', choreId: chore.id, choreName: chore.name });
+    setCompleting(null);
+    flash(`${member.name} earned ${pts} pts${bonusMult > 1 ? ` ⚡${bonusMult}×` : ''} ⭐`);
+  }
+  function handleRedeem(reward, member) {
+    logLedger({ memberId: member.id, delta: -(Number(reward.cost) || 0), type: 'redeem', reason: '', rewardId: reward.id, rewardName: reward.name, status: 'pending' });
+    setRedeeming(null);
+    flash(`${member.name} redeemed ${reward.name}`);
+  }
+  function handleFulfill(entryId) {
+    updateLedgerEntry(householdId, entryId, { status: 'given' }).catch(console.error);
+    setLedger(prev => prev.map(e => e.id === entryId ? { ...e, status: 'given' } : e));
+  }
+  function handleAdjust(member, delta, reason, type) {
+    logLedger({ memberId: member.id, delta, type, reason });
+    setAdjusting(null);
+    flash(`${delta < 0 ? 'Docked' : 'Gave'} ${Math.abs(delta)} pts · ${member.name}`);
+  }
+
+  // ── Rewards menu + promo (household config) ──
+  function persistHousehold(patch) {
+    setHousehold(h => ({ ...(h || {}), ...patch }));
+    if (householdId) db.doc(`households/${householdId}`).set(patch, { merge: true }).catch(console.error);
+  }
+  function saveReward(r) {
+    const withId = r.id ? r : { ...r, id: generateId() };
+    const exists = rewards.some(x => x.id === withId.id);
+    persistHousehold({ rewards: exists ? rewards.map(x => x.id === withId.id ? withId : x) : [...rewards, withId] });
+    setRewardEdit(null);
+  }
+  function deleteReward(id) { persistHousehold({ rewards: rewards.filter(x => x.id !== id) }); setRewardEdit(null); }
+  function saveBonus(next) {
+    persistHousehold({ pointsBonus: next });
+    setBonusOpen(false);
+    flash(next.active ? `Promo on — points ×${next.multiplier}` : 'Promo ended');
+  }
+
   const order = { needs_owner: 0, unclaimed: 1, claimed: 2, shared: 3 };
   const sorted = [...chores].sort((a, b) => (order[choreStatus(a)] - order[choreStatus(b)]));
+
+  const tab = (id, txt) => (
+    <button onClick={() => setView(id)} style={{
+      flex: 1, padding: '12px', borderRadius: 0, cursor: 'pointer', border: 'none',
+      borderBottom: `2px solid ${view === id ? 'var(--accent)' : 'var(--rule)'}`,
+      background: 'none', fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 12,
+      letterSpacing: '0.14em', textTransform: 'uppercase', color: view === id ? 'var(--accent)' : 'var(--ink-2)',
+    }}>{txt}</button>
+  );
+
+  const promoBanner = bonus.active ? (
+    <div style={{ background: 'var(--accent)', color: 'var(--accent-ink)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 13, letterSpacing: '0.06em', textTransform: 'uppercase', flex: 1 }}>
+        ⚡ {bonus.label || 'Bonus'} — points ×{bonus.multiplier}
+      </span>
+      <button onClick={() => setBonusOpen(true)} style={{ background: 'none', border: '1px solid var(--accent-ink)', color: 'var(--accent-ink)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '5px 10px', cursor: 'pointer', borderRadius: 0 }}>Manage</button>
+    </div>
+  ) : null;
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', background: 'var(--paper)', minHeight: '100vh' }}>
       <Nav onAdd={() => setSheet({})} onData={() => setDataOpen(true)} />
 
-      {chores.length === 0 ? (
-        <EmptyState onAdd={() => setSheet({})} onImport={() => setDataOpen(true)} />
-      ) : (
-        <div style={{ paddingBottom: 48 }}>
-          {/* Dashboard: who owns the work? */}
-          <div style={{ padding: '22px 16px 4px' }}>
-            <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 14 }}>
-              Who owns the work?
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--rule)' }}>
+        {tab('chores', 'Chores')}
+        {tab('rewards', 'Rewards')}
+      </div>
+
+      {promoBanner}
+
+      {view === 'chores' ? (
+        chores.length === 0 ? (
+          <EmptyState onAdd={() => setSheet({})} onImport={() => setDataOpen(true)} />
+        ) : (
+          <div style={{ paddingBottom: 48 }}>
+            <div style={{ padding: '22px 16px 4px' }}>
+              <div style={eyebrow}>Who owns the work?</div>
+              <OwnershipPie chores={chores} members={members} />
             </div>
-            <OwnershipPie chores={chores} members={members} />
+            <div style={{ height: 1, background: 'var(--rule)', margin: '18px 16px 0' }} />
+            <div style={{ padding: '4px 16px 0' }}>
+              {sorted.map(c => (
+                <ChoreRow
+                  key={c.id}
+                  chore={c}
+                  members={members}
+                  bonusMult={bonusMult}
+                  expanded={expandedId === c.id}
+                  onToggle={() => setExpanded(expandedId === c.id ? null : c.id)}
+                  onClaim={handleClaim}
+                  onRelease={handleRelease}
+                  onEdit={ch => { setExpanded(null); setSheet(ch); }}
+                  onDone={ch => setCompleting(ch)}
+                />
+              ))}
+            </div>
           </div>
-
-          <div style={{ height: 1, background: 'var(--rule)', margin: '18px 16px 0' }} />
-
-          {/* Master list */}
-          <div style={{ padding: '4px 16px 0' }}>
-            {sorted.map(c => (
-              <ChoreRow
-                key={c.id}
-                chore={c}
-                members={members}
-                expanded={expandedId === c.id}
-                onToggle={() => setExpanded(expandedId === c.id ? null : c.id)}
-                onClaim={handleClaim}
-                onRelease={handleRelease}
-                onEdit={ch => { setExpanded(null); setSheet(ch); }}
-              />
-            ))}
-          </div>
+        )
+      ) : (
+        <div>
+          {/* Promo control (parent) */}
+          {!bonus.active && (
+            <div style={{ padding: '16px 16px 0' }}>
+              <button onClick={() => setBonusOpen(true)} style={{ ...smallBtn, border: '1px dashed var(--accent)', color: 'var(--accent)' }}>⚡ Run a points promo</button>
+            </div>
+          )}
+          <RewardsView
+            members={members} ledger={ledger} rewards={rewards}
+            onRedeemClick={setRedeeming} onFulfill={handleFulfill}
+            onAddReward={() => setRewardEdit({})} onEditReward={setRewardEdit}
+            onAdjustClick={setAdjusting}
+          />
         </div>
       )}
 
       {sheet !== null && (
-        <ChoreSheet
-          chore={sheet}
-          members={members}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          onClose={() => setSheet(null)}
-          onAddMember={addMember}
-        />
+        <ChoreSheet chore={sheet} members={members} onSave={handleSave} onDelete={handleDelete} onClose={() => setSheet(null)} onAddMember={addMember} />
       )}
+      {dataOpen && <DataSheet chores={chores} onImport={handleImport} onClose={() => setDataOpen(false)} />}
+      {completing && <CompletionSheet chore={completing} members={members} bonusMult={bonusMult} onComplete={handleComplete} onClose={() => setCompleting(null)} />}
+      {redeeming && <RedeemSheet reward={redeeming} members={members} ledger={ledger} onRedeem={handleRedeem} onClose={() => setRedeeming(null)} />}
+      {rewardEdit && <RewardEditSheet reward={rewardEdit} onSave={saveReward} onDelete={deleteReward} onClose={() => setRewardEdit(null)} />}
+      {adjusting && <AdjustSheet member={adjusting} onAdjust={handleAdjust} onClose={() => setAdjusting(null)} />}
+      {bonusOpen && <BonusSheet bonus={bonus} onSave={saveBonus} onClose={() => setBonusOpen(false)} />}
 
-      {dataOpen && (
-        <DataSheet chores={chores} onImport={handleImport} onClose={() => setDataOpen(false)} />
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: 'var(--navy)', color: 'var(--paper)', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', padding: '12px 22px', borderRadius: 0, zIndex: 300, whiteSpace: 'nowrap' }}>{toast}</div>
       )}
     </div>
   );
