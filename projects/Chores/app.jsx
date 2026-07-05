@@ -559,18 +559,127 @@ function EmptyState({ onAdd, onImport }) {
 }
 
 // ─── Import / export ─────────────────────────────────────────────────────────
+// CSV is the primary format — it opens directly in Excel/Sheets for offline
+// editing, which is the point (unlike JSON, which nobody hand-edits). Legacy
+// JSON exports (from before this change) are still accepted on import.
 
-function choresToJson(chores) {
-  const clean = chores.map(c => ({
-    name: c.name || '', description: c.description || '', category: c.category || '',
-    shared: !!c.shared, allowanceWeekly: Number(c.allowanceWeekly) || 0,
-    estimatedTime: c.estimatedTime || '', frequency: c.frequency || { type: 'weekly' },
-    links: Array.isArray(c.links) ? c.links : [],
-  }));
-  return JSON.stringify({ ours_chores_export: 1, exportedAt: new Date().toISOString(), chores: clean }, null, 2);
+const CSV_HEADER = ['Chore Name', 'Description', 'Category', 'Shared', 'Weekly Pay', 'Estimated Time', 'Frequency', 'Every X Days', 'Links'];
+
+function csvEscape(val) {
+  const s = String(val === undefined || val === null ? '' : val);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
-// Owners/suggested-owners are stripped on import (member ids don't cross households).
+function frequencyToCsvCells(freq) {
+  const f = freq || { type: 'weekly' };
+  switch (f.type) {
+    case 'daily':    return ['Daily', ''];
+    case 'weekly':   return ['Weekly', ''];
+    case 'monthly':  return ['Monthly', ''];
+    case 'seasonal': return ['Seasonal', ''];
+    case 'everyX':   return ['Every X Days', String(f.everyXDays || '')];
+    case 'custom':   return [f.customLabel || 'Custom', ''];
+    default:         return ['Weekly', ''];
+  }
+}
+
+// "Label - https://url, Another - https://url2" — readable in a spreadsheet cell.
+function linksToCsvCell(links) {
+  return (links || []).map(l => (l.label ? `${l.label} - ${l.url}` : l.url)).join(' | ');
+}
+function csvCellToLinks(cell) {
+  if (!cell) return [];
+  return cell.split('|').map(s => s.trim()).filter(Boolean).map(entry => {
+    const i = entry.indexOf(' - ');
+    return i === -1 ? { label: '', url: entry } : { label: entry.slice(0, i).trim(), url: entry.slice(i + 3).trim() };
+  });
+}
+
+function choresToCsv(chores) {
+  const rows = [CSV_HEADER];
+  chores.forEach(c => {
+    const [freqCell, everyXCell] = frequencyToCsvCells(c.frequency);
+    rows.push([
+      c.name || '', c.description || '', c.category || '',
+      c.shared ? 'Yes' : 'No',
+      c.shared ? '' : (Number(c.allowanceWeekly) || 0),
+      c.estimatedTime || '',
+      freqCell, everyXCell,
+      linksToCsvCell(c.links),
+    ]);
+  });
+  // ﻿ (UTF-8 BOM) so Excel on Windows renders accented/special characters correctly.
+  return '﻿' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+}
+
+// Minimal RFC4180-ish parser: handles quoted fields with embedded commas,
+// quotes ("" = literal "), and newlines.
+function parseCsvRows(text) {
+  const rows = []; let row = []; let field = ''; let inQuotes = false;
+  const t = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text; // strip BOM
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (inQuotes) {
+      if (ch === '"') { if (t[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += ch;
+    } else if (ch === '"') inQuotes = true;
+    else if (ch === ',') { row.push(field); field = ''; }
+    else if (ch === '\r') { /* skip; \n closes the row */ }
+    else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += ch;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => !(r.length === 1 && r[0].trim() === ''));
+}
+
+function csvToChores(text) {
+  const rows = parseCsvRows(text);
+  if (rows.length < 2) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const col = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; };
+  const iName  = col('chore name', 'name');
+  const iDesc  = col('description');
+  const iCat   = col('category');
+  const iShared= col('shared');
+  const iPay   = col('weekly pay', 'allowance', 'pay');
+  const iTime  = col('estimated time', 'time');
+  const iFreq  = col('frequency');
+  const iEveryX= col('every x days');
+  const iLinks = col('links');
+  const get = (cells, i) => (i === -1 ? '' : (cells[i] || '').trim());
+
+  const out = [];
+  for (let r = 1; r < rows.length; r++) {
+    const cells = rows[r];
+    const name = get(cells, iName);
+    if (!name) continue;
+    const shared = ['yes', 'y', 'true', '1'].includes(get(cells, iShared).toLowerCase());
+    const freqRaw = get(cells, iFreq), freqNorm = freqRaw.toLowerCase();
+    let frequency;
+    if (!freqRaw)                                       frequency = { type: 'weekly' };
+    else if (freqNorm === 'daily')                       frequency = { type: 'daily' };
+    else if (freqNorm === 'weekly')                       frequency = { type: 'weekly' };
+    else if (freqNorm === 'monthly')                      frequency = { type: 'monthly' };
+    else if (freqNorm === 'seasonal')                     frequency = { type: 'seasonal' };
+    else if (freqNorm.startsWith('every'))                frequency = { type: 'everyX', everyXDays: Number(get(cells, iEveryX)) || 1 };
+    else                                                  frequency = { type: 'custom', customLabel: freqRaw };
+
+    out.push({
+      name: name.slice(0, 200),
+      description: get(cells, iDesc),
+      category: get(cells, iCat),
+      shared,
+      allowanceWeekly: shared ? 0 : (Number(String(get(cells, iPay)).replace(/[^0-9.]/g, '')) || 0),
+      estimatedTime: get(cells, iTime),
+      frequency,
+      suggestedAssignee: '', owner: '',
+      links: csvCellToLinks(get(cells, iLinks)),
+    });
+  }
+  return out;
+}
+
+// Legacy support for the original JSON export format.
 function jsonToChores(text) {
   const data = JSON.parse(text);
   const arr = Array.isArray(data) ? data : (data && data.chores) || [];
@@ -584,8 +693,13 @@ function jsonToChores(text) {
   }));
 }
 
-function downloadText(filename, text) {
-  const blob = new Blob([text], { type: 'application/json' });
+function textToChores(text) {
+  const t = text.trim();
+  return (t.startsWith('{') || t.startsWith('[')) ? jsonToChores(text) : csvToChores(text);
+}
+
+function downloadText(filename, text, mime) {
+  const blob = new Blob([text], { type: mime || 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
@@ -601,19 +715,19 @@ function DataSheet({ chores, onImport, onClose }) {
   const [paste, setPaste] = React.useState('');
   const [msg, setMsg]     = React.useState('');
   const fileRef = React.useRef(null);
-  const exportText = React.useMemo(() => choresToJson(chores), [chores]);
+  const exportText = React.useMemo(() => choresToCsv(chores), [chores]);
 
   function copyExport() {
     navigator.clipboard.writeText(exportText).then(() => setMsg('Copied to clipboard.')).catch(() => setMsg('Copy failed — select the text and copy manually.'));
   }
   function doImport(text) {
     try {
-      const defs = jsonToChores(text);
-      if (!defs.length) { setMsg('No chores found in that data.'); return; }
+      const defs = textToChores(text);
+      if (!defs.length) { setMsg('No chores found in that data — check the header row matches.'); return; }
       onImport(defs);
       setMsg(`Imported ${defs.length} chore${defs.length === 1 ? '' : 's'}.`);
       setTimeout(onClose, 700);
-    } catch (e) { setMsg('Could not read that — is it valid JSON?'); }
+    } catch (e) { setMsg('Could not read that file — is it a valid CSV?'); }
   }
   function onFile(e) {
     const f = e.target.files && e.target.files[0];
@@ -652,24 +766,24 @@ function DataSheet({ chores, onImport, onClose }) {
         {tab === 'export' ? (
           <div>
             <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, lineHeight: 1.5 }}>
-              Copy or download your chores as JSON — back them up, or share the list with another family to get them started.
+              Download as a spreadsheet — open it in Excel or Google Sheets to edit offline, then import it back. Also handy to share a starter list with another family.
             </div>
             <textarea readOnly value={exportText} className="notes-textarea" style={{ minHeight: 160, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={copyExport} style={dataSolidBtn}>Copy JSON</button>
-              <button onClick={() => downloadText('our-chores.json', exportText)} style={dataOutlineBtn}>Download</button>
+              <button onClick={copyExport} style={dataSolidBtn}>Copy CSV</button>
+              <button onClick={() => downloadText('our-chores.csv', exportText, 'text/csv;charset=utf-8;')} style={dataOutlineBtn}>Download .csv</button>
             </div>
           </div>
         ) : (
           <div>
             <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, lineHeight: 1.5 }}>
-              Paste a chores JSON, or choose a file. Imported chores are added fresh — owners reset so your family claims their own.
+              Choose a .csv file (from Excel/Sheets), or paste CSV text. Columns: {CSV_HEADER.join(', ')}. Imported chores are added fresh — owners reset so your family claims their own.
             </div>
-            <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder="Paste chores JSON here…" className="notes-textarea" style={{ minHeight: 140, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
+            <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder="Paste CSV here…" className="notes-textarea" style={{ minHeight: 140, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button onClick={() => doImport(paste)} style={dataSolidBtn}>Import pasted</button>
               <button onClick={() => fileRef.current && fileRef.current.click()} style={dataOutlineBtn}>Choose file</button>
-              <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: 'none' }} />
+              <input ref={fileRef} type="file" accept=".csv,text/csv,.json,application/json" onChange={onFile} style={{ display: 'none' }} />
             </div>
           </div>
         )}
