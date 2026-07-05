@@ -313,7 +313,6 @@ function ProjectSheet({ project, onSave, onDelete, onClose }) {
         background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
         background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,

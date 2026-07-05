@@ -341,8 +341,8 @@ function SlotSheet({ slot, recipes, plan, onAssign, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop">
+      <div className="modal-sheet">
 
         {/* Shared header — ✕ always right; ← back below it in going-out mode */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
@@ -714,8 +714,8 @@ function RecipeForm({ recipe, onSave, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-sheet" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop">
+      <div className="modal-sheet" style={{ maxWidth: 500 }}>
         <div className="spread" style={{ marginBottom: 14 }}>
           <div className="eyebrow">{isEdit ? 'Edit recipe' : 'New recipe'}</div>
           <button className="btn btn-sm btn-ghost" onClick={onClose} style={{ padding: '0 8px', fontSize: 16 }}>✕</button>

@@ -611,7 +611,7 @@ function TripSheet({ trip, onSave, onDelete, onClose }) {
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    }}>
       <div style={{
         background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,
         padding: '20px 18px 32px', width: '100%', maxWidth: 500,

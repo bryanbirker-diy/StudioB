@@ -383,7 +383,7 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    }}>
       <div style={{
         background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0,
         padding: '20px 18px 36px', width: '100%', maxWidth: 520,
@@ -637,7 +637,7 @@ function DataSheet({ chores, onImport, onClose }) {
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'oklch(21% 0.045 262 / 0.55)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    }}>
       <div style={{ background: 'var(--paper)', borderTop: '5px solid var(--navy)', borderRadius: 0, padding: '20px 18px 32px', width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 22, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '-0.02em' }}>Import / Export<span style={{ color: 'var(--accent)' }}>.</span></span>

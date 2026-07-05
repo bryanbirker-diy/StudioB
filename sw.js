@@ -4,7 +4,7 @@
 // Bump this on every deploy that changes a same-origin file. Because the fetch
 // handler is cache-first, returning PWA users only pick up new code when the
 // cache name changes (the activate handler then deletes the old cache).
-const CACHE = 'ours-v6';
+const CACHE = 'ours-v7';
 
 // Files to pre-cache (app shell)
 const PRECACHE = [
