@@ -60,3 +60,52 @@ async function updateChore(householdId, choreId, changes) {
 async function deleteChore(householdId, choreId) {
   if (householdId) await choresRef(householdId).doc(choreId).delete();
 }
+
+// ─── Points ledger ───────────────────────────────────────────────────────────
+// Append-only transactions; a member's balance is the sum of their deltas.
+// entry: { id, memberId, delta, type:'earn'|'redeem'|'dock'|'adjust',
+//          reason, choreId?, choreName?, rewardId?, rewardName?,
+//          status?:'pending'|'given', by?, createdAt }
+
+const LEDGER_KEY = 'ch_ledger';
+
+function ledgerRef(householdId) {
+  return db.collection(`households/${householdId}/pointsLedger`);
+}
+
+function loadLedgerLocal() {
+  try { return JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveLedgerLocal(entries) {
+  localStorage.setItem(LEDGER_KEY, JSON.stringify(entries));
+}
+
+function subscribeLedger(householdId, onUpdate) {
+  if (!householdId) return () => {};
+  return ledgerRef(householdId)
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(
+      snap => {
+        const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        saveLedgerLocal(entries);
+        onUpdate(entries);
+      },
+      err => console.error('ledger snapshot error:', err)
+    );
+}
+
+async function addLedgerEntry(householdId, entry) {
+  const id = generateId();
+  const row = { ...entry, id, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+  if (householdId) await ledgerRef(householdId).doc(id).set(row);
+  return row;
+}
+
+async function updateLedgerEntry(householdId, entryId, changes) {
+  if (householdId) await ledgerRef(householdId).doc(entryId).update(changes);
+}
+
+async function deleteLedgerEntry(householdId, entryId) {
+  if (householdId) await ledgerRef(householdId).doc(entryId).delete();
+}
