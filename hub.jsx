@@ -150,7 +150,7 @@ const PRODUCTS = [
     letter: 'C',
     color: 'var(--navy)',
     border: 'var(--navy)',
-    tagline: 'Who owns what — and what it\'s worth.',
+    tagline: 'Who\'s doing what — and what it\'s worth.',
     href: 'projects/Chores/',
     live: true,
   },
@@ -410,7 +410,7 @@ function LeftRail({ activeProduct, household, user }) {
                   {p.id === 'pantry' ? 'meals → groceries' :
                    p.id === 'exploring' ? 'fly, drive, hike' :
                    p.id === 'money' ? 'bills & subscriptions' :
-                   p.id === 'chores' ? 'who owns what' :
+                   p.id === 'chores' ? 'who\'s doing what' :
                    'projects & costs'}
                 </div>
               </div>

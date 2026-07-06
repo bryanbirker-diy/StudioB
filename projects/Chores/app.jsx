@@ -42,15 +42,6 @@ function frequencyLabel(freq) {
   }
 }
 
-// Ownership status derives from the fields: owned once someone claims it,
-// "needs owner" when suggested but unclaimed, otherwise unclaimed.
-function choreStatus(chore) {
-  if (chore.shared) return 'shared';          // everyone pitches in, no owner, no points
-  if (chore.owner) return 'claimed';
-  if (chore.suggestedAssignee) return 'needs_owner';
-  return 'unclaimed';
-}
-
 // Points a chore is worth per completion. Falls back to the legacy weekly-$
 // value for chores created before the points switch, so nothing reads as zero.
 function chorePoints(chore) {
@@ -104,33 +95,60 @@ function fmtLastDone(ts) {
   return `${days}d ago`;
 }
 
-// ─── Shared-chore shares ────────────────────────────────────────────────────
-// A shared chore ("Pick up and put away") has a total point pool, split by a
-// fixed share = pool / known family size — not renegotiated by who actually
-// shows up. Each member claims their own share, independently locked to the
-// chore's own cadence, tracked per-member in chore.sharedCompletions.
-function sharePoints(chore, memberCount) {
-  const total = chorePoints(chore);
-  const n = Math.max(1, memberCount || 1);
-  return Math.round(total / n);
+// "Mom", "Mom & Ava", "Mom, Ava & Dad" — tolerant of the old single-id format
+// from before completions could be split.
+function fmtLastBy(idsOrId, members) {
+  const ids = Array.isArray(idsOrId) ? idsOrId : (idsOrId ? [idsOrId] : []);
+  const names = ids.map(id => (members.find(m => m.id === id) || {}).name).filter(Boolean);
+  if (!names.length) return '';
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
 }
 
-function sharedMemberLock(chore, memberId) {
+// ─── Split claims ───────────────────────────────────────────────────────────
+// No pre-assigned ownership — a chore just sits there available to anyone.
+// "Who owns it" is purely retrospective: the claims chart and each chore's
+// own completion history. Done together, points split evenly among whoever's
+// picked in the moment — not a fixed household-size division.
+function splitPoints(total, n) {
+  return Math.round((Number(total) || 0) / Math.max(1, n || 1));
+}
+
+// ─── List priority ──────────────────────────────────────────────────────────
+// Sorting is a second signal of what's falling behind, alongside the claims
+// chart: never-done and overdue chores (plus daily "quick win" chores, which
+// are always due the moment they're open) rise to the top; anything resting
+// in its cadence sinks to the bottom.
+function choreUrgencyBucket(chore) {
+  const lock = choreLock(chore);
+  if (lock.locked) return 2; // resting — bottom
+  if (!chore.lastCompletedAt) return 0; // never done — top
+  if (chore.frequency && chore.frequency.type === 'daily') return 0; // always a quick-win option once open
   const days = frequencyIntervalDays(chore.frequency);
-  const ts = chore.sharedCompletions && chore.sharedCompletions[memberId];
-  if (!days || !ts) return { locked: false };
-  const unlockAt = Number(ts) + days * 86400000;
-  if (Date.now() >= unlockAt) return { locked: false };
-  return { locked: true, unlockAt };
+  if (days) {
+    const sinceLastDays = (Date.now() - Number(chore.lastCompletedAt)) / 86400000;
+    if (sinceLastDays > days) return 0; // overdue relative to its own cadence
+  }
+  return 1; // available, roughly on schedule
 }
 
-// Soonest reopening among members currently locked on a shared chore.
-function soonestSharedUnlock(chore, members) {
-  const unlocks = members
-    .map(m => sharedMemberLock(chore, m.id))
-    .filter(l => l.locked)
-    .map(l => l.unlockAt);
-  return unlocks.length ? Math.min(...unlocks) : null;
+function choreStaleDays(chore) {
+  if (!chore.lastCompletedAt) return Infinity;
+  return (Date.now() - Number(chore.lastCompletedAt)) / 86400000;
+}
+
+// A small flag for the row — only shown when it's genuinely informative;
+// a daily chore just being open isn't "overdue," it's just today's option.
+function choreFlag(chore) {
+  if (!chore.lastCompletedAt) return 'Never done';
+  if (choreLock(chore).locked) return null;
+  if (chore.frequency && chore.frequency.type === 'daily') return null;
+  const days = frequencyIntervalDays(chore.frequency);
+  if (days) {
+    const overdueBy = Math.floor((Date.now() - Number(chore.lastCompletedAt)) / 86400000) - days;
+    if (overdueBy > 0) return `${overdueBy}d overdue`;
+  }
+  return null;
 }
 
 // ─── Claims period ──────────────────────────────────────────────────────────
@@ -296,50 +314,14 @@ function ClaimsPie({ ledger, members, period }) {
   );
 }
 
-// ─── Owner badge ─────────────────────────────────────────────────────────────
-
-function OwnerBadge({ chore, members }) {
-  const status = choreStatus(chore);
-  if (status === 'shared') {
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--navy)', whiteSpace: 'nowrap' }}>
-        <span style={{ width: 10, height: 10, background: 'var(--navy)', flexShrink: 0 }} />Shared
-      </span>
-    );
-  }
-  if (status === 'claimed') {
-    const m = members.find(x => x.id === chore.owner);
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--sans)', fontSize: 12, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap' }}>
-        <span style={{ width: 10, height: 10, background: familyColorById(m ? m.colorId : ''), flexShrink: 0 }} />
-        {m ? m.name : 'Owned'}
-      </span>
-    );
-  }
-  if (status === 'needs_owner') {
-    return <span style={{ fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)', whiteSpace: 'nowrap' }}>Needs owner</span>;
-  }
-  return <span style={{ fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-fade)', whiteSpace: 'nowrap' }}>Unclaimed</span>;
-}
-
 // ─── Chore row (editorial index row, expandable) ─────────────────────────────
 
-function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEdit, onDone, onReset, onClaimShare, onResetShare, bonusMult = 1 }) {
-  const status = choreStatus(chore);
-  const owner  = members.find(m => m.id === chore.owner);
-  const edge   = status === 'claimed' ? familyColorById(owner ? owner.colorId : '')
-              : status === 'needs_owner' ? 'var(--accent)'
-              : status === 'shared' ? 'var(--navy)' : 'var(--rule)';
-  const suggested = members.find(m => m.id === chore.suggestedAssignee);
+function ChoreRow({ chore, members, expanded, onToggle, onEdit, onDone, onReset, bonusMult = 1 }) {
   const lock = choreLock(chore);
-  const lastBy = members.find(m => m.id === chore.lastCompletedBy);
-  const pts = chorePoints(chore) * bonusMult;
-
-  // Shared: each member has their own claim + cadence lock on their own share.
-  const share = sharePoints(chore, members.length) * bonusMult;
-  const claimedCount = status === 'shared' ? members.filter(m => sharedMemberLock(chore, m.id).locked).length : 0;
-  const allClaimed = status === 'shared' && members.length > 0 && claimedCount === members.length;
-  const soonestUnlock = status === 'shared' ? soonestSharedUnlock(chore, members) : null;
+  const flag = choreFlag(chore);
+  const pts  = chorePoints(chore) * bonusMult;
+  const lastByText = fmtLastBy(chore.lastCompletedBy, members);
+  const edge = flag ? 'var(--accent)' : (chore.lastCompletedAt ? 'var(--navy)' : 'var(--rule)');
 
   return (
     <div style={{ borderBottom: '1px solid var(--rule)', borderLeft: `3px solid ${edge}` }}>
@@ -357,60 +339,44 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
             {chore.name}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 4, alignItems: 'center' }}>
-            <OwnerBadge chore={chore} members={members} />
+            {flag && (
+              <span style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)' }}>{flag}</span>
+            )}
             {chore.frequency && (
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-2)' }}>{frequencyLabel(chore.frequency)}</span>
             )}
             {chore.estimatedTime && (
               <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>{chore.estimatedTime}</span>
             )}
-            {!chore.shared && chore.lastCompletedAt && (
-              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>
-                {lastBy ? `${lastBy.name} · ` : ''}{fmtLastDone(chore.lastCompletedAt)}
-              </span>
-            )}
-            {status === 'shared' && members.length > 0 && (
-              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-2)' }}>{claimedCount}/{members.length} claimed</span>
+            {lastByText && (
+              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>{lastByText} · {fmtLastDone(chore.lastCompletedAt)}</span>
             )}
           </div>
         </div>
 
-        {!chore.shared ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            {pts > 0 && (
-              <div style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 18, color: 'var(--navy)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {pts}<span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-2)' }}> pts</span>{bonusMult > 1 ? <span style={{ color: 'var(--accent)' }}> ⚡</span> : null}
-              </div>
-            )}
-            {lock.locked ? (
-              <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-fade)', whiteSpace: 'nowrap' }}>
-                Done · opens {fmtUnlock(lock.unlockAt)}
-              </div>
-            ) : (
-              <button
-                onClick={e => { e.stopPropagation(); onDone(chore); }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 0, cursor: 'pointer',
-                  border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
-                  fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >✓ Done</button>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            {share > 0 && (
-              <div style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 18, color: 'var(--navy)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {share}<span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-2)' }}> pts ea</span>{bonusMult > 1 ? <span style={{ color: 'var(--accent)' }}> ⚡</span> : null}
-              </div>
-            )}
-            <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: allClaimed ? 'var(--ink-fade)' : 'var(--accent)', whiteSpace: 'nowrap' }}>
-              {allClaimed ? `All parts · opens ${fmtUnlock(soonestUnlock)}` : 'Tap to claim →'}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          {pts > 0 && (
+            <div style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 18, color: 'var(--navy)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+              {pts}<span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-2)' }}> pts</span>{bonusMult > 1 ? <span style={{ color: 'var(--accent)' }}> ⚡</span> : null}
             </div>
-          </div>
-        )}
+          )}
+          {lock.locked ? (
+            <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-fade)', whiteSpace: 'nowrap' }}>
+              Done · opens {fmtUnlock(lock.unlockAt)}
+            </div>
+          ) : (
+            <button
+              onClick={e => { e.stopPropagation(); onDone(chore); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 12px', borderRadius: 0, cursor: 'pointer',
+                border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
+                fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+            >✓ Done</button>
+          )}
+        </div>
 
         <span style={{
           color: 'var(--accent)', fontSize: 18, lineHeight: 1,
@@ -447,81 +413,14 @@ function ChoreRow({ chore, members, expanded, onToggle, onClaim, onRelease, onEd
           {/* Resting: already earned this cadence */}
           {lock.locked && (
             <div style={{ background: 'var(--paper-2)', border: '1px solid var(--rule)', padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.5 }}>
-              Already done this cadence{lastBy ? ` by ${lastBy.name}` : ''} — opens again {fmtUnlock(lock.unlockAt)}.
+              Already done this cadence{lastByText ? ` by ${lastByText}` : ''} — opens again {fmtUnlock(lock.unlockAt)}.
               {' '}Did it happen again already? Use <strong style={{ color: 'var(--navy)' }}>Award points</strong> in Rewards for the extra,
               {' '}or <button onClick={() => onReset(chore.id)} style={{ ...textBtn, display: 'inline', textTransform: 'none', letterSpacing: 0, fontWeight: 700, textDecoration: 'underline' }}>reset availability</button>.
             </div>
           )}
 
-          {/* Ownership controls */}
           <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12 }}>
-            {status === 'shared' ? (
-              <div>
-                <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 10 }}>
-                  Split {members.length} ways — {share} pts each, once per cadence
-                </div>
-                {members.length === 0 ? (
-                  <span style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-fade)' }}>Add family members to split this chore.</span>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {members.map(m => {
-                      const mLock = sharedMemberLock(chore, m.id);
-                      return (
-                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 10, height: 10, background: familyColorById(m.colorId), flexShrink: 0 }} />
-                          <span style={{ flex: 1, fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--navy)' }}>{m.name}</span>
-                          {mLock.locked ? (
-                            <>
-                              <span style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)' }}>done · opens {fmtUnlock(mLock.unlockAt)}</span>
-                              <button onClick={() => onResetShare(chore.id, m.id)} style={textBtn}>reset</button>
-                            </>
-                          ) : (
-                            <button onClick={() => onClaimShare(chore, m)} style={{
-                              padding: '5px 11px', borderRadius: 0, cursor: 'pointer',
-                              border: '1px solid var(--navy)', background: 'var(--card)',
-                              fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--navy)',
-                            }}>Claim {share} pts</button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ) : status === 'claimed' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)' }}>
-                  Owned by <strong style={{ color: 'var(--navy)' }}>{owner ? owner.name : 'someone'}</strong>
-                </span>
-                <button onClick={() => onRelease(chore.id)} style={textBtn}>Release</button>
-              </div>
-            ) : (
-              <div>
-                <div style={{ fontFamily: 'var(--sans)', fontWeight: 800, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-2)', marginBottom: 8 }}>
-                  Who's taking this on?{suggested ? ` (suggested: ${suggested.name})` : ''}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {members.map(m => (
-                    <button key={m.id} onClick={() => onClaim(chore.id, m.id)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7,
-                        padding: '7px 13px', borderRadius: 0, cursor: 'pointer',
-                        border: `1px solid ${m.id === chore.suggestedAssignee ? 'var(--accent)' : 'var(--rule)'}`,
-                        background: 'var(--card)',
-                        fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12,
-                        color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.04em',
-                      }}>
-                      <span style={{ width: 10, height: 10, background: familyColorById(m.colorId) }} />
-                      Claim · {m.name}
-                    </button>
-                  ))}
-                  {members.length === 0 && (
-                    <span style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-fade)' }}>Add family members to claim chores.</span>
-                  )}
-                </div>
-              </div>
-            )}
-            <button onClick={() => onEdit(chore)} style={{ ...textBtn, marginTop: 12 }}>Edit chore</button>
+            <button onClick={() => onEdit(chore)} style={textBtn}>Edit chore</button>
           </div>
         </div>
       )}
@@ -538,17 +437,15 @@ const textBtn = {
 
 // ─── Create / edit sheet ─────────────────────────────────────────────────────
 
-function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) {
+function ChoreSheet({ chore, onSave, onDelete, onClose }) {
   const isNew = !chore.id;
   const [name,     setName]     = React.useState(chore.name || '');
   const [desc,     setDesc]     = React.useState(chore.description || '');
-  const [shared,   setShared]   = React.useState(!!chore.shared);
   const [points,   setPoints]   = React.useState(chore.points != null ? chore.points : (chore.allowanceWeekly != null ? chore.allowanceWeekly : ''));
   const [estTime,  setEstTime]  = React.useState(chore.estimatedTime || '');
   const [freqType, setFreqType] = React.useState((chore.frequency && chore.frequency.type) || 'weekly');
   const [everyX,   setEveryX]   = React.useState((chore.frequency && chore.frequency.everyXDays) || 3);
   const [customLbl,setCustomLbl]= React.useState((chore.frequency && chore.frequency.customLabel) || '');
-  const [assignee, setAssignee] = React.useState(chore.suggestedAssignee || '');
   const [links,    setLinks]    = React.useState(chore.links && chore.links.length ? chore.links : []);
   const [confirmDel, setConfirmDel] = React.useState(false);
   const [error,    setError]    = React.useState('');
@@ -564,27 +461,18 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
     const data = {
       name: name.trim(),
       description: desc.trim(),
-      shared,
       points: points === '' ? 0 : Number(String(points).replace(/[^0-9.]/g, '')) || 0,
       estimatedTime: estTime.trim(),
       frequency: buildFrequency(),
-      suggestedAssignee: shared ? '' : (assignee || ''),
       links: links.filter(l => (l.url || '').trim()),
     };
-    // Shared chores have no owner; otherwise preserve owner when editing.
-    if (chore.id) { data.id = chore.id; data.owner = shared ? '' : (chore.owner || ''); }
-    else { data.owner = ''; }
+    if (chore.id) data.id = chore.id;
     onSave(data);
   }
 
   function addLink()      { setLinks(prev => [...prev, { label: '', url: '' }]); }
   function setLink(i, k, v){ setLinks(prev => prev.map((l, j) => j === i ? { ...l, [k]: v } : l)); }
   function removeLink(i)  { setLinks(prev => prev.filter((_, j) => j !== i)); }
-
-  function handleAddMember() {
-    const nm = (prompt('Family member name?') || '').trim();
-    if (nm) { const created = onAddMember(nm); if (created) setAssignee(created.id); }
-  }
 
   const label = { fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-2)', display: 'block', marginBottom: 8 };
   const chip = (active) => ({
@@ -626,38 +514,20 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
           <textarea className="notes-textarea" value={desc} onChange={e => setDesc(e.target.value)} placeholder="What does 'done' look like?" style={{ minHeight: 70 }} />
         </div>
 
-        {/* Shared toggle */}
-        <div style={{ marginBottom: 16 }}>
-          <button type="button" onClick={() => setShared(s => !s)} style={{
-            display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
-            padding: '12px 13px', borderRadius: 0, cursor: 'pointer',
-            border: `1px solid ${shared ? 'var(--accent)' : 'var(--rule)'}`,
-            background: shared ? 'color-mix(in oklch, var(--accent) 8%, transparent)' : 'var(--card)',
-          }}>
-            <span style={{ width: 18, height: 18, flexShrink: 0, border: `1px solid ${shared ? 'var(--accent)' : 'var(--navy)'}`, background: shared ? 'var(--accent)' : 'transparent', color: 'var(--accent-ink)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{shared ? '✓' : ''}</span>
-            <span>
-              <span style={{ display: 'block', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 13, color: 'var(--navy)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Shared chore</span>
-              <span style={{ display: 'block', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>Everyone pitches in — no single owner, no pay.</span>
-            </span>
-          </button>
-        </div>
-
         {/* Points + estimated time */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: shared ? 6 : 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 6 }}>
           <div>
-            <label style={label}>{shared ? 'Total points' : 'Points'} <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--ink-fade)' }}>{shared ? '(split by all)' : '(per time done)'}</span></label>
-            <input className="text-input" type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} placeholder={shared ? '20' : '0'} />
+            <label style={label}>Points <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--ink-fade)' }}>(per completion)</span></label>
+            <input className="text-input" type="number" min="0" value={points} onChange={e => setPoints(e.target.value)} placeholder="0" />
           </div>
           <div>
             <label style={label}>Est. time</label>
             <input className="text-input" value={estTime} onChange={e => setEstTime(e.target.value)} placeholder="20 min" />
           </div>
         </div>
-        {shared && (
-          <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)', marginBottom: 16, lineHeight: 1.4 }}>
-            Split evenly across {members.length || 1} family member{members.length === 1 ? '' : 's'} — about {sharePoints({ points: Number(points) || 0 }, members.length)} pts each, claimed independently.
-          </div>
-        )}
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)', marginBottom: 16, lineHeight: 1.4 }}>
+          Done together? Whoever marks it done can split these points between everyone who helped.
+        </div>
 
         {/* Frequency */}
         <div style={{ marginBottom: 16 }}>
@@ -686,21 +556,6 @@ function ChoreSheet({ chore, members, onSave, onDelete, onClose, onAddMember }) 
             </>
           )}
         </div>
-
-        {/* Suggested assignee (hidden when shared) */}
-        {!shared && <div style={{ marginBottom: 16 }}>
-          <label style={label}>Suggested owner <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--ink-fade)' }}>(they still claim it)</span></label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {members.map(m => (
-              <button key={m.id} onClick={() => setAssignee(assignee === m.id ? '' : m.id)}
-                style={{ ...chip(assignee === m.id), display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 10, height: 10, background: familyColorById(m.colorId) }} />
-                {m.name}
-              </button>
-            ))}
-            <button onClick={handleAddMember} style={{ ...chip(false), borderStyle: 'dashed', color: 'var(--ink-2)' }}>＋ Add person</button>
-          </div>
-        </div>}
 
         {/* Standards / links */}
         <div style={{ marginBottom: 20 }}>
@@ -756,7 +611,7 @@ function EmptyState({ onAdd, onImport }) {
         Make the work<br />visible<span style={{ color: 'var(--accent)' }}>.</span>
       </div>
       <div style={{ fontFamily: 'var(--sans)', fontSize: 15, color: 'var(--ink-2)', maxWidth: 380, margin: '0 auto 26px', lineHeight: 1.5 }}>
-        Start building your family's shared responsibilities — who owns what, how it's done, and what it's worth.
+        Start building your family's shared responsibilities — what needs doing, how it's done, and what it's worth.
       </div>
       <button onClick={onAdd} style={{
         padding: '13px 26px', borderRadius: 0,
@@ -777,7 +632,7 @@ function EmptyState({ onAdd, onImport }) {
 // editing, which is the point (unlike JSON, which nobody hand-edits). Legacy
 // JSON exports (from before this change) are still accepted on import.
 
-const CSV_HEADER = ['Chore Name', 'Description', 'Shared', 'Points', 'Estimated Time', 'Frequency', 'Every X Days', 'Links'];
+const CSV_HEADER = ['Chore Name', 'Description', 'Points', 'Estimated Time', 'Frequency', 'Every X Days', 'Links'];
 
 function csvEscape(val) {
   const s = String(val === undefined || val === null ? '' : val);
@@ -815,7 +670,6 @@ function choresToCsv(chores) {
     const [freqCell, everyXCell] = frequencyToCsvCells(c.frequency);
     rows.push([
       c.name || '', c.description || '',
-      c.shared ? 'Yes' : 'No',
       chorePoints(c),
       c.estimatedTime || '',
       freqCell, everyXCell,
@@ -853,7 +707,6 @@ function csvToChores(text) {
   const col = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; };
   const iName  = col('chore name', 'name');
   const iDesc  = col('description');
-  const iShared= col('shared');
   const iPay   = col('points', 'weekly pay', 'allowance', 'pay');
   const iTime  = col('estimated time', 'time');
   const iFreq  = col('frequency');
@@ -866,7 +719,6 @@ function csvToChores(text) {
     const cells = rows[r];
     const name = get(cells, iName);
     if (!name) continue;
-    const shared = ['yes', 'y', 'true', '1'].includes(get(cells, iShared).toLowerCase());
     const freqRaw = get(cells, iFreq), freqNorm = freqRaw.toLowerCase();
     let frequency;
     if (!freqRaw)                                       frequency = { type: 'weekly' };
@@ -880,27 +732,25 @@ function csvToChores(text) {
     out.push({
       name: name.slice(0, 200),
       description: get(cells, iDesc),
-      shared,
       points: Number(String(get(cells, iPay)).replace(/[^0-9.]/g, '')) || 0,
       estimatedTime: get(cells, iTime),
       frequency,
-      suggestedAssignee: '', owner: '',
       links: csvCellToLinks(get(cells, iLinks)),
     });
   }
   return out;
 }
 
-// Legacy support for the original JSON export format.
+// Legacy support for the original JSON export format (drops shared/owner
+// fields from older exports — that model no longer exists).
 function jsonToChores(text) {
   const data = JSON.parse(text);
   const arr = Array.isArray(data) ? data : (data && data.chores) || [];
   return arr.filter(c => c && c.name).map(c => ({
     name: String(c.name).slice(0, 200), description: c.description || '',
-    shared: !!c.shared, allowanceWeekly: Number(c.allowanceWeekly) || 0,
+    points: c.points != null ? Number(c.points) || 0 : Number(c.allowanceWeekly) || 0,
     estimatedTime: c.estimatedTime || '',
     frequency: (c.frequency && c.frequency.type) ? c.frequency : { type: 'weekly' },
-    suggestedAssignee: '', owner: '',
     links: Array.isArray(c.links) ? c.links.filter(l => l && l.url) : [],
   }));
 }
@@ -989,7 +839,7 @@ function DataSheet({ chores, onImport, onClose }) {
         ) : (
           <div>
             <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, lineHeight: 1.5 }}>
-              Choose a .csv file (from Excel/Sheets), or paste CSV text. Columns: {CSV_HEADER.join(', ')}. Imported chores are added fresh — owners reset so your family claims their own.
+              Choose a .csv file (from Excel/Sheets), or paste CSV text. Columns: {CSV_HEADER.join(', ')}. Imported chores are added fresh, ready to mark done.
             </div>
             <textarea value={paste} onChange={e => setPaste(e.target.value)} placeholder="Paste CSV here…" className="notes-textarea" style={{ minHeight: 140, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} />
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -1039,21 +889,40 @@ function MemberChip({ m, onClick, disabled, suffix, highlight }) {
   );
 }
 
-function CompletionSheet({ chore, members, bonusMult = 1, onComplete, onClose }) {
-  const pts = chorePoints(chore) * bonusMult;
-  const ordered = [...members].sort((a, b) => (a.id === chore.owner ? -1 : b.id === chore.owner ? 1 : 0));
+function CompletionSheet({ chore, members, bonusMult = 1, onComplete, onAddMember, onClose }) {
+  const [selected, setSelected] = React.useState([]);
+  const total = chorePoints(chore) * bonusMult;
+  const each = splitPoints(total, selected.length || 1);
+
+  function toggle(id) {
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+  function handleAdd() {
+    const nm = (prompt('Family member name?') || '').trim();
+    if (nm) { const created = onAddMember(nm); if (created) setSelected(prev => [...prev, created.id]); }
+  }
+
   return (
     <Modal title="Who did it?" onClose={onClose}>
       <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
-        <strong style={{ color: 'var(--navy)' }}>{chore.name}</strong> — earns <strong style={{ color: 'var(--accent)' }}>{pts} pts</strong>{bonusMult > 1 ? <span style={{ color: 'var(--accent)', fontWeight: 800 }}> ⚡{bonusMult}×</span> : null}. Tap who did it.
+        <strong style={{ color: 'var(--navy)' }}>{chore.name}</strong> — earns <strong style={{ color: 'var(--accent)' }}>{total} pts</strong>{bonusMult > 1 ? <span style={{ color: 'var(--accent)', fontWeight: 800 }}> ⚡{bonusMult}×</span> : null}. Tap everyone who helped — done together, points split evenly.
       </div>
-      {members.length === 0 ? (
-        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-fade)' }}>Add family members first (hub Settings → Family).</div>
-      ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {ordered.map(m => <MemberChip key={m.id} m={m} highlight={m.id === chore.owner} onClick={() => onComplete(chore, m)} />)}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        {members.map(m => (
+          <MemberChip key={m.id} m={m} highlight={selected.includes(m.id)} onClick={() => toggle(m.id)} />
+        ))}
+        <button onClick={handleAdd} style={{ ...smallBtn, border: '1px dashed var(--ink-2)', color: 'var(--ink-2)' }}>＋ Add person</button>
+      </div>
+      {selected.length > 0 && (
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>
+          {selected.length === 1 ? `${each} pts to them.` : `Split ${selected.length} ways — ${each} pts each.`}
         </div>
       )}
+      <button
+        onClick={() => selected.length && onComplete(chore, selected)}
+        disabled={!selected.length}
+        style={{ ...primaryBtn, width: '100%', padding: '14px', opacity: selected.length ? 1 : 0.4, cursor: selected.length ? 'pointer' : 'default' }}
+      >{selected.length ? 'Confirm' : 'Select who did it'}</button>
     </Modal>
   );
 }
@@ -1263,14 +1132,6 @@ function ChoresApp() {
     deleteChore(householdId, id).catch(console.error);
     setSheet(null);
   }
-  function handleClaim(choreId, memberId) {
-    setChores(prev => prev.map(c => c.id === choreId ? { ...c, owner: memberId } : c));
-    updateChore(householdId, choreId, { owner: memberId }).catch(console.error);
-  }
-  function handleRelease(choreId) {
-    setChores(prev => prev.map(c => c.id === choreId ? { ...c, owner: '' } : c));
-    updateChore(householdId, choreId, { owner: '' }).catch(console.error);
-  }
   function handleImport(defs) {
     defs.forEach(d => addChore(householdId, d).catch(console.error));
     setChores(prev => [...prev, ...defs.map(d => ({ ...d, id: generateId() }))]);
@@ -1282,31 +1143,30 @@ function ChoresApp() {
     addLedgerEntry(householdId, e).catch(console.error);
     setLedger(prev => [...prev, { ...e, id: generateId(), createdAt: Date.now() }]); // optimistic
   }
-  function handleComplete(chore, member) {
-    const pts = chorePoints(chore) * bonusMult;
-    logLedger({ memberId: member.id, delta: pts, type: 'earn', reason: bonusMult > 1 ? `${bonusMult}× promo` : '', choreId: chore.id, choreName: chore.name });
+  // A completion can credit more than one person — points split evenly among
+  // whoever's picked, one ledger entry each, each noting who else was in on it.
+  function handleComplete(chore, memberIds) {
+    const total = chorePoints(chore) * bonusMult;
+    const each  = splitPoints(total, memberIds.length);
+    const nameOf = id => (members.find(m => m.id === id) || {}).name || 'someone';
+    memberIds.forEach(id => {
+      const others = memberIds.filter(mid => mid !== id).map(nameOf);
+      const parts = [];
+      if (bonusMult > 1) parts.push(`${bonusMult}× promo`);
+      if (others.length) parts.push(`split with ${others.join(', ')}`);
+      logLedger({ memberId: id, delta: each, type: 'earn', reason: parts.join(' · '), choreId: chore.id, choreName: chore.name });
+    });
     const now = Date.now();
-    setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastCompletedAt: now, lastCompletedBy: member.id } : c));
-    updateChore(householdId, chore.id, { lastCompletedAt: now, lastCompletedBy: member.id }).catch(console.error);
+    setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastCompletedAt: now, lastCompletedBy: memberIds } : c));
+    updateChore(householdId, chore.id, { lastCompletedAt: now, lastCompletedBy: memberIds }).catch(console.error);
     setCompleting(null);
-    flash(`${member.name} earned ${pts} pts${bonusMult > 1 ? ` ⚡${bonusMult}×` : ''} ⭐`);
+    const names = memberIds.map(nameOf);
+    const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}` : names[0];
+    flash(`${who} earned ${each} pts each${bonusMult > 1 ? ` ⚡${bonusMult}×` : ''} ⭐`);
   }
   function handleResetLock(choreId) {
     setChores(prev => prev.map(c => c.id === choreId ? { ...c, lastCompletedAt: null, lastCompletedBy: '' } : c));
     updateChore(householdId, choreId, { lastCompletedAt: null, lastCompletedBy: '' }).catch(console.error);
-    flash('Availability reset');
-  }
-  function handleClaimShare(chore, member) {
-    const share = sharePoints(chore, members.length) * bonusMult;
-    logLedger({ memberId: member.id, delta: share, type: 'earn', reason: bonusMult > 1 ? `${bonusMult}× promo (shared)` : 'shared share', choreId: chore.id, choreName: chore.name });
-    const now = Date.now();
-    setChores(prev => prev.map(c => c.id === chore.id ? { ...c, sharedCompletions: { ...(c.sharedCompletions || {}), [member.id]: now } } : c));
-    updateChore(householdId, chore.id, { [`sharedCompletions.${member.id}`]: now }).catch(console.error);
-    flash(`${member.name} claimed a share — ${share} pts${bonusMult > 1 ? ' ⚡' : ''} ⭐`);
-  }
-  function handleResetShare(choreId, memberId) {
-    setChores(prev => prev.map(c => c.id === choreId ? { ...c, sharedCompletions: { ...(c.sharedCompletions || {}), [memberId]: null } } : c));
-    updateChore(householdId, choreId, { [`sharedCompletions.${memberId}`]: null }).catch(console.error);
     flash('Availability reset');
   }
   function handleRedeem(reward, member) {
@@ -1342,8 +1202,13 @@ function ChoresApp() {
     flash(next.active ? `Promo on — points ×${next.multiplier}` : 'Promo ended');
   }
 
-  const order = { needs_owner: 0, unclaimed: 1, claimed: 2, shared: 3 };
-  const sorted = [...chores].sort((a, b) => (order[choreStatus(a)] - order[choreStatus(b)]));
+  // Never-done, overdue, and available daily chores float up; resting chores
+  // sink down — the list itself flags what's falling behind.
+  const sorted = [...chores].sort((a, b) => {
+    const ba = choreUrgencyBucket(a), bb = choreUrgencyBucket(b);
+    if (ba !== bb) return ba - bb;
+    return choreStaleDays(b) - choreStaleDays(a);
+  });
 
   const tab = (id, txt) => (
     <button onClick={() => setView(id)} style={{
@@ -1394,13 +1259,9 @@ function ChoresApp() {
                   bonusMult={bonusMult}
                   expanded={expandedId === c.id}
                   onToggle={() => setExpanded(expandedId === c.id ? null : c.id)}
-                  onClaim={handleClaim}
-                  onRelease={handleRelease}
                   onEdit={ch => { setExpanded(null); setSheet(ch); }}
                   onDone={ch => setCompleting(ch)}
                   onReset={handleResetLock}
-                  onClaimShare={handleClaimShare}
-                  onResetShare={handleResetShare}
                 />
               ))}
             </div>
@@ -1424,10 +1285,10 @@ function ChoresApp() {
       )}
 
       {sheet !== null && (
-        <ChoreSheet chore={sheet} members={members} onSave={handleSave} onDelete={handleDelete} onClose={() => setSheet(null)} onAddMember={addMember} />
+        <ChoreSheet chore={sheet} onSave={handleSave} onDelete={handleDelete} onClose={() => setSheet(null)} />
       )}
       {dataOpen && <DataSheet chores={chores} onImport={handleImport} onClose={() => setDataOpen(false)} />}
-      {completing && <CompletionSheet chore={completing} members={members} bonusMult={bonusMult} onComplete={handleComplete} onClose={() => setCompleting(null)} />}
+      {completing && <CompletionSheet chore={completing} members={members} bonusMult={bonusMult} onComplete={handleComplete} onAddMember={addMember} onClose={() => setCompleting(null)} />}
       {redeeming && <RedeemSheet reward={redeeming} members={members} ledger={ledger} onRedeem={handleRedeem} onClose={() => setRedeeming(null)} />}
       {rewardEdit && <RewardEditSheet reward={rewardEdit} onSave={saveReward} onDelete={deleteReward} onClose={() => setRewardEdit(null)} />}
       {adjusting && <AdjustSheet member={adjusting} onAdjust={handleAdjust} onClose={() => setAdjusting(null)} />}
