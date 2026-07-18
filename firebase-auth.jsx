@@ -87,6 +87,26 @@
     await db.doc(`households/${householdId}`).set({ familyMembers: members }, { merge: true });
   }
 
+  // ─── Parent/admin role ──────────────────────────────────────────────────────
+  // A household-wide flag gating currency-integrity actions (chore setup,
+  // point awards, promos, the reward menu) to parents. Lives here rather than
+  // in any one module so any surface in the suite can check it.
+  //
+  // Defaults to "everyone is admin" when adminUids is unset — so deploying
+  // this never silently locks out an existing household. A household opts in
+  // by turning on Parent Controls in Settings, which seeds adminUids with
+  // whoever flips the switch so they can't lock themselves out.
+  function isHouseholdAdmin(household, uid) {
+    if (!household || !uid) return false;
+    const admins = household.adminUids;
+    if (!Array.isArray(admins) || admins.length === 0) return true;
+    return admins.includes(uid);
+  }
+  async function saveAdminUids(householdId, adminUids) {
+    if (!householdId || !db) return;
+    await db.doc(`households/${householdId}`).set({ adminUids }, { merge: true });
+  }
+
   // One-time migration: move localStorage data into Firestore on first sign-in
   async function migrateLocalData(householdId) {
     if (localStorage.getItem('ours_migrated')) return;
@@ -779,6 +799,8 @@
     familyColorById,
     getFamilyMembers,
     saveFamilyMembers,
+    isHouseholdAdmin,
+    saveAdminUids,
   };
 
 })();
