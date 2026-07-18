@@ -354,22 +354,22 @@ function ChoreRow({ chore, members, expanded, onToggle, onEdit, onDone, onReset,
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           {pts > 0 && (
-            <div style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 18, color: 'var(--navy)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+            <div style={{ fontFamily: 'var(--sans)', fontWeight: 900, fontSize: 16, color: 'var(--navy)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
               {pts}<span style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-2)' }}> pts</span>{bonusMult > 1 ? <span style={{ color: 'var(--accent)' }}> ⚡</span> : null}
             </div>
           )}
           {lock.locked ? (
             <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-fade)', whiteSpace: 'nowrap' }}>
-              Done · opens {fmtUnlock(lock.unlockAt)}
+              opens {fmtUnlock(lock.unlockAt)}
             </div>
           ) : (
             <button
               onClick={e => { e.stopPropagation(); onDone(chore); }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 0, cursor: 'pointer',
+                padding: '7px 11px', borderRadius: 0, cursor: 'pointer',
                 border: '1px solid var(--navy)', background: 'var(--navy)', color: 'var(--paper)',
                 fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
