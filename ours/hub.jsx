@@ -4,7 +4,8 @@
 
 // ─── Auth imports (from shared firebase-auth.jsx) ─────────────────────────
 const { AuthProvider, useAuth, InviteCodeBanner, ACCENT_PRESETS, applyAccent,
-  getFamilyMembers, FAMILY_COLORS, familyColorById, saveFamilyMembers } = window._oursAuth;
+  getFamilyMembers, FAMILY_COLORS, familyColorById, saveFamilyMembers,
+  isHouseholdAdmin, saveAdminUids } = window._oursAuth;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -571,7 +572,26 @@ function SettingsView({ user, household }) {
   const familyTextBtn = { background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-2)', padding: 0 };
 
   const memberProfiles = household?.memberProfiles || {};
-  const memberList     = Object.values(memberProfiles);
+  // Keep the uid alongside each profile — needed to grant/revoke admin.
+  const memberEntries  = Object.entries(memberProfiles).map(([uid, p]) => ({ uid, ...p }));
+  const memberList     = memberEntries;
+
+  // ── Parent controls (admin role) ──
+  // Unset adminUids = everyone's admin (pre-existing households, unaffected
+  // until a parent opts in). Turning it on seeds with whoever flips the
+  // switch so they can't lock themselves out.
+  const adminsEnabled = Array.isArray(household?.adminUids) && household.adminUids.length > 0;
+  function persistAdmins(next) {
+    setHousehold(h => ({ ...(h || {}), adminUids: next }));
+    if (household && household.id) saveAdminUids(household.id, next).catch(console.error);
+  }
+  function toggleParentControls() {
+    persistAdmins(adminsEnabled ? [] : (user && user.uid ? [user.uid] : []));
+  }
+  function toggleMemberAdmin(uid) {
+    const current = household?.adminUids || [];
+    persistAdmins(current.includes(uid) ? current.filter(x => x !== uid) : [...current, uid]);
+  }
 
   const card = {
     border: '1.5px solid var(--rule-soft)',
@@ -696,37 +716,63 @@ function SettingsView({ user, household }) {
         </div>
       </div>
 
-      {/* ── Members ── */}
+      {/* ── Members / Parent controls ── */}
       <div style={card}>
         <div style={cardHeader}>Members</div>
-        {memberList.length > 0 ? memberList.map((m, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 16px',
-            borderBottom: i < memberList.length - 1 ? '1px dotted var(--rule-soft)' : 'none',
-          }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: '50%',
-              border: '1.5px solid var(--rule-soft)',
-              background: 'rgba(138,111,78,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--hand)', fontSize: 15, fontWeight: 700,
-              color: 'var(--brown)', flexShrink: 0,
+        <div style={{ padding: '12px 16px', borderBottom: '1px dotted var(--rule-soft)' }}>
+          <button onClick={toggleParentControls} style={{
+            padding: '9px 16px', borderRadius: 0, cursor: 'pointer',
+            border: `1px solid ${adminsEnabled ? 'var(--accent)' : 'var(--navy)'}`,
+            background: adminsEnabled ? 'color-mix(in oklch, var(--accent) 10%, transparent)' : 'var(--navy)',
+            fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase',
+            color: adminsEnabled ? 'var(--navy)' : 'var(--paper)',
+          }}>{adminsEnabled ? '✓ Parent controls on' : 'Turn on parent controls'}</button>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 11, color: 'var(--ink-fade)', marginTop: 8, lineHeight: 1.4 }}>
+            {adminsEnabled
+              ? 'Chore setup, point awards, promos, and the reward menu are parent-only. Mark who below.'
+              : 'Off by default — everyone has full access. Turn on to restrict chore setup, awards, promos, and the reward menu to parents.'}
+          </div>
+        </div>
+        {memberList.length > 0 ? memberList.map((m, i) => {
+          const isAdmin = (household?.adminUids || []).includes(m.uid);
+          return (
+            <div key={m.uid || i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 16px',
+              borderBottom: i < memberList.length - 1 ? '1px dotted var(--rule-soft)' : 'none',
             }}>
-              {(m.displayName || m.email || '?')[0].toUpperCase()}
-            </div>
-            <div>
-              <div style={{ fontFamily: 'var(--pen)', fontSize: 14, color: 'var(--ink)', lineHeight: 1.2 }}>
-                {m.displayName || m.email || 'Unknown'}
+              <div style={{
+                width: 34, height: 34, borderRadius: '50%',
+                border: '1.5px solid var(--rule-soft)',
+                background: 'rgba(138,111,78,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--hand)', fontSize: 15, fontWeight: 700,
+                color: 'var(--brown)', flexShrink: 0,
+              }}>
+                {(m.displayName || m.email || '?')[0].toUpperCase()}
               </div>
-              {m.email && m.displayName && (
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-fade)', marginTop: 1 }}>
-                  {m.email}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--pen)', fontSize: 14, color: 'var(--ink)', lineHeight: 1.2 }}>
+                  {m.displayName || m.email || 'Unknown'}
                 </div>
+                {m.email && m.displayName && (
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-fade)', marginTop: 1 }}>
+                    {m.email}
+                  </div>
+                )}
+              </div>
+              {adminsEnabled && (
+                <button onClick={() => toggleMemberAdmin(m.uid)} style={{
+                  padding: '5px 11px', borderRadius: 0, cursor: 'pointer', flexShrink: 0,
+                  border: `1px solid ${isAdmin ? 'var(--accent)' : 'var(--rule)'}`,
+                  background: isAdmin ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'var(--card)',
+                  fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em',
+                  color: isAdmin ? 'var(--navy)' : 'var(--ink-2)',
+                }}>{isAdmin ? '✓ Parent' : 'Make parent'}</button>
               )}
             </div>
-          </div>
-        )) : (
+          );
+        }) : (
           <div style={{ padding: '16px', fontFamily: 'var(--pen)', fontSize: 13, color: 'var(--ink-fade)', fontStyle: 'italic' }}>
             No member profiles found
           </div>
