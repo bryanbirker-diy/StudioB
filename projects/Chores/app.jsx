@@ -234,19 +234,67 @@ function Nav({ onAdd, onData, canAddChore }) {
 // doing the work," which a point-in-time owner list can't.
 
 function PeriodToggle({ period, onChange }) {
+  return <SortToggle options={PERIODS} active={period} onChange={onChange} />;
+}
+
+// Generic segmented toggle — backs the period filter, chore sort, and reward
+// sort controls so they share one look.
+function SortToggle({ options, active, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-      {PERIODS.map(p => (
-        <button key={p.id} onClick={() => onChange(p.id)} style={{
+      {options.map(o => (
+        <button key={o.id} onClick={() => onChange(o.id)} style={{
           padding: '6px 12px', borderRadius: 0, cursor: 'pointer',
-          border: `1px solid ${period === p.id ? 'var(--accent)' : 'var(--rule)'}`,
-          background: period === p.id ? 'color-mix(in oklch, var(--accent) 10%, transparent)' : 'var(--card)',
+          border: `1px solid ${active === o.id ? 'var(--accent)' : 'var(--rule)'}`,
+          background: active === o.id ? 'color-mix(in oklch, var(--accent) 10%, transparent)' : 'var(--card)',
           fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase',
-          color: period === p.id ? 'var(--navy)' : 'var(--ink-2)',
-        }}>{p.label}</button>
+          color: active === o.id ? 'var(--navy)' : 'var(--ink-2)',
+        }}>{o.label}</button>
       ))}
     </div>
   );
+}
+
+// ─── Chore + reward sorting ─────────────────────────────────────────────────
+
+const CHORE_SORTS = [
+  { id: 'available', label: 'Available' },
+  { id: 'alpha', label: 'A–Z' },
+  { id: 'points', label: 'Points' },
+];
+
+// "Available" preserves the original smart sort (never-done/overdue/daily
+// float up, resting sinks down); the other two are plain, predictable orders.
+function sortChores(chores, sortBy) {
+  const arr = [...chores];
+  if (sortBy === 'alpha') return arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  if (sortBy === 'points') return arr.sort((a, b) => chorePoints(b) - chorePoints(a));
+  return arr.sort((a, b) => {
+    const ba = choreUrgencyBucket(a), bb = choreUrgencyBucket(b);
+    if (ba !== bb) return ba - bb;
+    return choreStaleDays(b) - choreStaleDays(a);
+  });
+}
+
+const REWARD_SORTS = [
+  { id: 'availability', label: 'Available' },
+  { id: 'alpha', label: 'A–Z' },
+  { id: 'points', label: 'Points' },
+];
+
+// "Availability" surfaces what's actually in reach first: rewards that at
+// least one member can currently afford, cheapest of those first.
+function sortRewards(rewards, sortBy, members, ledger) {
+  const arr = [...rewards];
+  if (sortBy === 'alpha') return arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  if (sortBy === 'points') return arr.sort((a, b) => (Number(a.cost) || 0) - (Number(b.cost) || 0));
+  const maxBalance = members.length ? Math.max(...members.map(m => balanceFor(ledger, m.id))) : 0;
+  return arr.sort((a, b) => {
+    const aCost = Number(a.cost) || 0, bCost = Number(b.cost) || 0;
+    const aAfford = aCost <= maxBalance ? 0 : 1, bAfford = bCost <= maxBalance ? 0 : 1;
+    if (aAfford !== bAfford) return aAfford - bAfford;
+    return aCost - bCost;
+  });
 }
 
 function ClaimsPie({ ledger, members, period }) {
@@ -997,6 +1045,8 @@ function AdjustSheet({ member, onAdjust, onClose }) {
 // Kid-facing: wallet + browse the reward menu + redeem. Nothing here edits
 // the economy — awarding, promos, and the menu itself live in Manage.
 function RewardsView({ members, ledger, rewards, onRedeemClick }) {
+  const [sortBy, setSortBy] = React.useState('availability');
+  const sorted = sortRewards(rewards, sortBy, members, ledger);
   return (
     <div style={{ paddingBottom: 48 }}>
       {/* Wallets */}
@@ -1016,11 +1066,12 @@ function RewardsView({ members, ledger, rewards, onRedeemClick }) {
       {/* Reward menu */}
       <div style={{ padding: '22px 16px 4px' }}>
         <div style={eyebrow}>Reward menu</div>
+        {rewards.length > 0 && <SortToggle options={REWARD_SORTS} active={sortBy} onChange={setSortBy} />}
         {rewards.length === 0 ? (
           <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
             Nothing on the menu yet — ask a parent to add what points can buy.
           </div>
-        ) : rewards.map(r => (
+        ) : sorted.map(r => (
           <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--rule)' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 15, color: 'var(--navy)' }}>{r.name}</div>
@@ -1075,6 +1126,8 @@ function LedgerRow({ entry, members }) {
 
 function ManageView({ members, ledger, rewards, bonus, onAdjustClick, onAddReward, onEditReward, onFulfill, onBonusOpen }) {
   const [period, setPeriod] = React.useState('30');
+  const [rewardSort, setRewardSort] = React.useState('alpha');
+  const sortedRewards = sortRewards(rewards, rewardSort, members, ledger);
   const pending  = ledger.filter(e => e.type === 'redeem' && e.status === 'pending');
   const given    = ledger.filter(e => e.type === 'redeem' && e.status === 'given')
     .sort((a, b) => entryTimeMs(b) - entryTimeMs(a));
@@ -1144,11 +1197,12 @@ function ManageView({ members, ledger, rewards, bonus, onAdjustClick, onAddRewar
       {/* Reward menu management */}
       <div style={{ padding: '22px 16px 4px' }}>
         <div style={eyebrow}>Reward menu</div>
+        {rewards.length > 0 && <SortToggle options={REWARD_SORTS} active={rewardSort} onChange={setRewardSort} />}
         {rewards.length === 0 ? (
           <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.5 }}>
             Set what points can buy — screen time, a movie night, $10 cash, a later bedtime.
           </div>
-        ) : rewards.map(r => (
+        ) : sortedRewards.map(r => (
           <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--rule)' }}>
             <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => onEditReward(r)}>
               <div style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 15, color: 'var(--navy)' }}>{r.name}</div>
@@ -1224,6 +1278,7 @@ function ChoresApp() {
   const [adjusting, setAdjusting]   = React.useState(null);
   const [bonusOpen, setBonusOpen]   = React.useState(false);
   const [toast, setToast]           = React.useState('');
+  const [choreSort, setChoreSort]   = React.useState('available');
 
   React.useEffect(() => {
     if (!householdId) return;
@@ -1333,13 +1388,9 @@ function ChoresApp() {
     flash(next.active ? `Promo on — points ×${next.multiplier}` : 'Promo ended');
   }
 
-  // Never-done, overdue, and available daily chores float up; resting chores
-  // sink down — the list itself flags what's falling behind.
-  const sorted = [...chores].sort((a, b) => {
-    const ba = choreUrgencyBucket(a), bb = choreUrgencyBucket(b);
-    if (ba !== bb) return ba - bb;
-    return choreStaleDays(b) - choreStaleDays(a);
-  });
+  // Default ("Available") floats never-done/overdue/daily chores up and
+  // sinks resting ones down; alpha and points give a plain, predictable order.
+  const sorted = sortChores(chores, choreSort);
 
   const pendingCount = ledger.filter(e => e.type === 'redeem' && e.status === 'pending').length;
 
@@ -1392,6 +1443,9 @@ function ChoresApp() {
               <ClaimsPie ledger={ledger} members={members} period={period} />
             </div>
             <div style={{ height: 1, background: 'var(--rule)', margin: '18px 16px 0' }} />
+            <div style={{ padding: '16px 16px 0' }}>
+              <SortToggle options={CHORE_SORTS} active={choreSort} onChange={setChoreSort} />
+            </div>
             <div style={{ padding: '4px 16px 0' }}>
               {sorted.map(c => (
                 <ChoreRow
