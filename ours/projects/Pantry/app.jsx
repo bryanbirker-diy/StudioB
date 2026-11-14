@@ -820,12 +820,20 @@ const TYPE_BADGE = {
   party_trick: { label: '🎉 Party Trick', cls: 'chip chip-olive' },
 };
 
-function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport, onBack }) {
+function RecipeList({ recipes, plan, onAdd, onEdit, onDelete, onImport, onBack }) {
   const [confirmId,     setConfirmId]     = React.useState(null);
   const [importPreview, setImportPreview] = React.useState(null);
   const [search,        setSearch]        = React.useState('');
   const [typeFilter,    setTypeFilter]    = React.useState('all');
   const fileInputRef = React.useRef();
+
+  // Replace-all drops every current recipe id, so any plan slot pointing at
+  // one of them would be orphaned the same way a single-recipe delete is.
+  const replaceOrphanCount = React.useMemo(() => {
+    if (!plan) return 0;
+    const currentIds = new Set(recipes.map(r => r.id));
+    return plan.slots.filter(s => s.status === 'recipe' && currentIds.has(s.recipe_id)).length;
+  }, [plan, recipes]);
 
   const filtered = React.useMemo(() => {
     return recipes.filter(r => {
@@ -930,9 +938,14 @@ function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport, onBack }) {
             <div style={{ color: 'var(--ink-soft)', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
               {importPreview.slice(0, 5).map(r => r.main_dish_name).join(', ')}{importPreview.length > 5 ? `… +${importPreview.length - 5} more` : ''}
             </div>
-            <div style={{ color: 'var(--ink-soft)', fontSize: 13, marginBottom: 20 }}>
+            <div style={{ color: 'var(--ink-soft)', fontSize: 13, marginBottom: recipes.length > 0 && replaceOrphanCount > 0 ? 8 : 20 }}>
               Add to your {recipes.length} existing recipe{recipes.length !== 1 ? 's' : ''}, or replace them all?
             </div>
+            {recipes.length > 0 && replaceOrphanCount > 0 && (
+              <div style={{ color: 'var(--terracotta)', fontSize: 12.5, marginBottom: 20, lineHeight: 1.4 }}>
+                {replaceOrphanCount} active plan slot{replaceOrphanCount !== 1 ? 's' : ''} use{replaceOrphanCount === 1 ? 's' : ''} these recipes and will need reassigning if you replace them.
+              </div>
+            )}
             <div className="row" style={{ gap: 8 }}>
               <button className="btn fill" onClick={() => setImportPreview(null)}>Cancel</button>
               {recipes.length > 0 && (
@@ -1413,18 +1426,19 @@ function PrepareTab({ plan, recipes, pantry }) {
   async function copyToClipboard() {
     if (!needToBuy.length) return;
     const text = needToBuy.map(i => i.name).join('\n');
-    setCopyLabel('✓ Copied!');
-    setTimeout(() => setCopyLabel('📋 Copy grocery list'), 2500);
-    try { await navigator.clipboard.writeText(text); }
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
     catch {
       try {
         const ta = document.createElement('textarea');
         ta.value = text;
         ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
         document.body.appendChild(ta); ta.focus(); ta.select();
-        document.execCommand('copy'); document.body.removeChild(ta);
-      } catch { /* silent */ }
+        ok = document.execCommand('copy'); document.body.removeChild(ta);
+      } catch { ok = false; }
     }
+    setCopyLabel(ok ? '✓ Copied!' : '⚠ Copy failed — select & copy manually');
+    setTimeout(() => setCopyLabel('📋 Copy grocery list'), 2500);
   }
 
   return (
@@ -1472,12 +1486,32 @@ function App() {
   const [newPlanMode,    setNewPlanMode]    = React.useState(false);
   const [recipeFormOpen, setRecipeFormOpen] = React.useState(false);
   const [editingRecipe,  setEditingRecipe]  = React.useState(null);
+  const [syncNotice,     setSyncNotice]     = React.useState(false);
+
+  // Last updatedAt this device has seen from Firestore for plan/pantry — used
+  // to detect whether another device wrote in between our read and our next
+  // write (PANTRY-SYNC-004: last-write-wins, but tell the loser it happened).
+  const planUpdatedAtRef   = React.useRef(null);
+  const pantryUpdatedAtRef = React.useRef(null);
+  const syncNoticeTimerRef = React.useRef(null);
+
+  function flashSyncNotice() {
+    clearTimeout(syncNoticeTimerRef.current);
+    setSyncNotice(true);
+    syncNoticeTimerRef.current = setTimeout(() => setSyncNotice(false), 6000);
+  }
 
   React.useEffect(() => {
     if (!householdId) return;
     const unsubR  = subscribeRecipes(householdId, setRecipes);
-    const unsubP  = subscribePlan(householdId, setPlan);
-    const unsubPa = subscribePantry(householdId, setPantry);
+    const unsubP  = subscribePlan(householdId, p => {
+      planUpdatedAtRef.current = p ? p.updatedAt : null;
+      setPlan(p);
+    });
+    const unsubPa = subscribePantry(householdId, p => {
+      pantryUpdatedAtRef.current = p ? p.updatedAt : null;
+      setPantry(p);
+    });
     return () => { unsubR(); unsubP(); unsubPa(); };
   }, [householdId]);
 
@@ -1501,14 +1535,18 @@ function App() {
   function updatePlan(updated) {
     if (updated) savePlan(updated); else clearPlan();
     setPlan(updated);
-    savePlanFirestore(householdId, updated).catch(console.error);
+    savePlanFirestore(householdId, updated, planUpdatedAtRef.current)
+      .then(r => { if (r && r.overwrote) flashSyncNotice(); })
+      .catch(console.error);
   }
 
   // ── Pantry ──────────────────────────────────────────────────
   function updatePantry(updated) {
     savePantry(updated);
     setPantry(updated);
-    savePantryFirestore(householdId, updated).catch(console.error);
+    savePantryFirestore(householdId, updated, pantryUpdatedAtRef.current)
+      .then(r => { if (r && r.overwrote) flashSyncNotice(); })
+      .catch(console.error);
   }
 
   // Check/uncheck a grocery item → persists to pantry.onHand
@@ -1551,6 +1589,15 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--paper-2)', fontFamily: 'var(--pen)', color: 'var(--ink)' }}>
       <TopBar onOpenRecipes={() => setView('recipes')} />
+      {syncNotice && (
+        <div style={{
+          position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60,
+          background: 'var(--ink)', color: 'var(--paper)', fontSize: 12.5,
+          padding: '8px 16px', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+        }}>
+          Updated on another device — refresh to see the latest
+        </div>
+      )}
 
       {showDatePicker && (
         <DateRangePicker existingPlan={plan} onStart={handleStartPlan} />
@@ -1563,6 +1610,7 @@ function App() {
       )}
       {view === 'recipes' && (
         <RecipeList recipes={recipes}
+          plan={plan}
           onBack={() => setView('plan')}
           onAdd={() => openRecipeForm(null)}
           onEdit={openRecipeForm}

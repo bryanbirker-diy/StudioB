@@ -164,24 +164,41 @@ async function deleteRecipeFirestore(householdId, recipeId) {
   await recipesRef(householdId).doc(recipeId).delete();
 }
 
+// True if the doc's current remote updatedAt no longer matches what this
+// device last synced — i.e. someone else wrote since, and the write we're
+// about to make will silently overwrite that edit.
+async function remoteChangedSince(ref, knownUpdatedAt) {
+  if (!knownUpdatedAt) return false; // no baseline yet — nothing to compare against
+  try {
+    const snap = await ref.get();
+    const remoteUpdatedAt = snap.exists ? snap.data().updatedAt : null;
+    if (!remoteUpdatedAt) return false;
+    return !remoteUpdatedAt.isEqual(knownUpdatedAt);
+  } catch { return false; }
+}
+
 // CRUD — plan
-async function savePlanFirestore(householdId, plan) {
-  if (!householdId) return;
+async function savePlanFirestore(householdId, plan, knownUpdatedAt) {
+  if (!householdId) return { overwrote: false };
   if (!plan) {
     await planDocRef(householdId).delete().catch(() => {});
-    return;
+    return { overwrote: false };
   }
+  const overwrote = await remoteChangedSince(planDocRef(householdId), knownUpdatedAt);
   await planDocRef(householdId).set(
     { ...plan, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
     { merge: false } // full overwrite to keep slots in sync
   );
+  return { overwrote };
 }
 
 // CRUD — pantry
-async function savePantryFirestore(householdId, pantry) {
-  if (!householdId) return;
+async function savePantryFirestore(householdId, pantry, knownUpdatedAt) {
+  if (!householdId) return { overwrote: false };
+  const overwrote = await remoteChangedSince(pantryDocRef(householdId), knownUpdatedAt);
   await pantryDocRef(householdId).set(
     { ...pantry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
     { merge: false }
   );
+  return { overwrote };
 }
