@@ -1487,6 +1487,7 @@ function App() {
   const [recipeFormOpen, setRecipeFormOpen] = React.useState(false);
   const [editingRecipe,  setEditingRecipe]  = React.useState(null);
   const [syncNotice,     setSyncNotice]     = React.useState(false);
+  const [notBackedUp,    setNotBackedUp]    = React.useState(false);
 
   // Last updatedAt this device has seen from Firestore for plan/pantry — used
   // to detect whether another device wrote in between our read and our next
@@ -1514,6 +1515,10 @@ function App() {
     });
     return () => { unsubR(); unsubP(); unsubPa(); };
   }, [householdId]);
+
+  // Non-blocking "not backed up" indicator after 3 consecutive Firestore
+  // read/write failures, cleared the moment anything succeeds (PANTRY-SYNC-002).
+  React.useEffect(() => onSyncFailureChange(setNotBackedUp), []);
 
   // ── Recipes ─────────────────────────────────────────────────
   function updateRecipes(updated) { saveRecipes(updated); setRecipes(updated); }
@@ -1596,6 +1601,15 @@ function App() {
           padding: '8px 16px', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
         }}>
           Updated on another device — refresh to see the latest
+        </div>
+      )}
+      {notBackedUp && (
+        <div style={{
+          position: 'fixed', top: syncNotice ? 54 : 10, left: '50%', transform: 'translateX(-50%)', zIndex: 60,
+          background: '#b23b3b', color: 'var(--paper)', fontSize: 12.5,
+          padding: '8px 16px', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+        }}>
+          ⚠ Not backed up — check your connection
         </div>
       )}
 

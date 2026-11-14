@@ -107,6 +107,23 @@ function daysBetween(startDate, endDate) {
 
 // ─── Firestore layer ───────────────────────────────────────────────────────
 
+// Tracks consecutive Firestore read/write failures across recipes/plan/pantry
+// so the UI can show a "not backed up" indicator after 3 in a row, and clear
+// it again the moment anything succeeds (PANTRY-SYNC-002).
+let syncFailureCount = 0;
+const syncFailureListeners = new Set();
+
+function onSyncFailureChange(cb) {
+  syncFailureListeners.add(cb);
+  return () => syncFailureListeners.delete(cb);
+}
+
+function reportSyncResult(ok) {
+  syncFailureCount = ok ? 0 : syncFailureCount + 1;
+  const unbacked = syncFailureCount >= 3;
+  syncFailureListeners.forEach(cb => cb(unbacked));
+}
+
 function recipesRef(householdId)  { return db.collection(`households/${householdId}/recipes`); }
 function planDocRef(householdId)  { return db.doc(`households/${householdId}/meta/plan`); }
 function pantryDocRef(householdId){ return db.doc(`households/${householdId}/meta/pantry`); }
@@ -116,11 +133,12 @@ function subscribeRecipes(householdId, onUpdate) {
   if (!householdId) return () => {};
   return recipesRef(householdId).onSnapshot(
     snap => {
+      reportSyncResult(true);
       const recipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       saveRecipes(recipes);
       onUpdate(recipes);
     },
-    err => console.error('recipes snapshot:', err)
+    err => { reportSyncResult(false); console.error('recipes snapshot:', err); }
   );
 }
 
@@ -128,11 +146,12 @@ function subscribePlan(householdId, onUpdate) {
   if (!householdId) return () => {};
   return planDocRef(householdId).onSnapshot(
     snap => {
+      reportSyncResult(true);
       const plan = snap.exists ? snap.data() : null;
       if (plan) savePlan(plan); else clearPlan();
       onUpdate(plan);
     },
-    err => console.error('plan snapshot:', err)
+    err => { reportSyncResult(false); console.error('plan snapshot:', err); }
   );
 }
 
@@ -140,28 +159,41 @@ function subscribePantry(householdId, onUpdate) {
   if (!householdId) return () => {};
   return pantryDocRef(householdId).onSnapshot(
     snap => {
+      reportSyncResult(true);
       const pantry = snap.exists
         ? snap.data()
         : { staples: [], onHand: [], extras: [] };
       savePantry(pantry);
       onUpdate(pantry);
     },
-    err => console.error('pantry snapshot:', err)
+    err => { reportSyncResult(false); console.error('pantry snapshot:', err); }
   );
 }
 
 // CRUD — recipes
 async function saveRecipeFirestore(householdId, recipe) {
   if (!householdId) return;
-  await recipesRef(householdId).doc(recipe.id).set(
-    { ...recipe, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
-    { merge: true }
-  );
+  try {
+    await recipesRef(householdId).doc(recipe.id).set(
+      { ...recipe, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    reportSyncResult(true);
+  } catch (err) {
+    reportSyncResult(false);
+    throw err;
+  }
 }
 
 async function deleteRecipeFirestore(householdId, recipeId) {
   if (!householdId) return;
-  await recipesRef(householdId).doc(recipeId).delete();
+  try {
+    await recipesRef(householdId).doc(recipeId).delete();
+    reportSyncResult(true);
+  } catch (err) {
+    reportSyncResult(false);
+    throw err;
+  }
 }
 
 // True if the doc's current remote updatedAt no longer matches what this
@@ -185,10 +217,16 @@ async function savePlanFirestore(householdId, plan, knownUpdatedAt) {
     return { overwrote: false };
   }
   const overwrote = await remoteChangedSince(planDocRef(householdId), knownUpdatedAt);
-  await planDocRef(householdId).set(
-    { ...plan, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
-    { merge: false } // full overwrite to keep slots in sync
-  );
+  try {
+    await planDocRef(householdId).set(
+      { ...plan, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: false } // full overwrite to keep slots in sync
+    );
+    reportSyncResult(true);
+  } catch (err) {
+    reportSyncResult(false);
+    throw err;
+  }
   return { overwrote };
 }
 
@@ -196,9 +234,15 @@ async function savePlanFirestore(householdId, plan, knownUpdatedAt) {
 async function savePantryFirestore(householdId, pantry, knownUpdatedAt) {
   if (!householdId) return { overwrote: false };
   const overwrote = await remoteChangedSince(pantryDocRef(householdId), knownUpdatedAt);
-  await pantryDocRef(householdId).set(
-    { ...pantry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
-    { merge: false }
-  );
+  try {
+    await pantryDocRef(householdId).set(
+      { ...pantry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: false }
+    );
+    reportSyncResult(true);
+  } catch (err) {
+    reportSyncResult(false);
+    throw err;
+  }
   return { overwrote };
 }
