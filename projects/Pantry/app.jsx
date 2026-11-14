@@ -1018,6 +1018,8 @@ function RecipeList({ recipes, onAdd, onEdit, onDelete, onImport, onBack }) {
 // ── GroceryList ───────────────────────────────────────────────
 function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemoveExtra, onNavigate }) {
   const [extraInput, setExtraInput] = React.useState('');
+  const [dupeNotice, setDupeNotice] = React.useState(false);
+  const dupeTimerRef = React.useRef(null);
 
   // onHand items are displayed at component level; generateGroceryList only filters staples
   const items = React.useMemo(
@@ -1036,8 +1038,17 @@ function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemo
   function handleAddExtra() {
     const v = extraInput.trim();
     if (!v) return;
-    onAddExtra(v);
     setExtraInput('');
+    const key = v.toLowerCase();
+    const alreadyOnList = items.some(i => i.name.toLowerCase() === key) ||
+      (pantry?.extras || []).some(e => e.trim().toLowerCase() === key);
+    if (alreadyOnList) {
+      clearTimeout(dupeTimerRef.current);
+      setDupeNotice(true);
+      dupeTimerRef.current = setTimeout(() => setDupeNotice(false), 2200);
+      return;
+    }
+    onAddExtra(v);
   }
 
   // Manual add block — shown always
@@ -1053,6 +1064,9 @@ function GroceryList({ plan, recipes, pantry, onToggleOnHand, onAddExtra, onRemo
           style={{ flex: 1, fontSize: 14 }} />
         <button className="btn btn-sm btn-clay" onClick={handleAddExtra}>Add</button>
       </div>
+      {dupeNotice && (
+        <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 6 }}>Already on your list</div>
+      )}
     </div>
   );
 
