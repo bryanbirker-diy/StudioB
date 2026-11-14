@@ -857,7 +857,7 @@ function CenterColumn({ stats, user, household }) {
   }, [stats]);
 
   return (
-    <div style={{
+    <div data-testid="hub-center" style={{
       flex: 1,
       maxWidth: 420,
       width: '100%',
