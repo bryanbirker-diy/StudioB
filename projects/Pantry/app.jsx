@@ -1472,6 +1472,8 @@ function App() {
   const [newPlanMode,    setNewPlanMode]    = React.useState(false);
   const [recipeFormOpen, setRecipeFormOpen] = React.useState(false);
   const [editingRecipe,  setEditingRecipe]  = React.useState(null);
+  const [notBackedUp,    setNotBackedUp]    = React.useState(false);
+  const [conflictNotice, setConflictNotice] = React.useState(null);
 
   React.useEffect(() => {
     if (!householdId) return;
@@ -1480,6 +1482,17 @@ function App() {
     const unsubPa = subscribePantry(householdId, setPantry);
     return () => { unsubR(); unsubP(); unsubPa(); };
   }, [householdId]);
+
+  // A single isolated Firestore failure stays silent; 3+ in a row surfaces
+  // a small "not backed up" banner until the next write succeeds.
+  React.useEffect(() => onSyncFailureChange(count => setNotBackedUp(count >= 3)), []);
+
+  // Last-write-wins is unchanged, but if this device's save is about to
+  // overwrite a remote write it never saw, it gets a brief heads-up.
+  React.useEffect(() => onConflict(kind => {
+    setConflictNotice(kind === 'plan' ? 'Your plan was updated on another device' : 'Your pantry was updated on another device');
+    setTimeout(() => setConflictNotice(null), 6000);
+  }), []);
 
   // ── Recipes ─────────────────────────────────────────────────
   function updateRecipes(updated) { saveRecipes(updated); setRecipes(updated); }
@@ -1551,6 +1564,25 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--paper-2)', fontFamily: 'var(--pen)', color: 'var(--ink)' }}>
       <TopBar onOpenRecipes={() => setView('recipes')} />
+
+      {notBackedUp && (
+        <div style={{
+          padding: '7px 14px', textAlign: 'center',
+          background: 'var(--accent)', color: '#fff',
+          fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 12, letterSpacing: '0.03em',
+        }}>
+          ⚠ Not backed up — changes are only saved on this device right now
+        </div>
+      )}
+      {conflictNotice && (
+        <div style={{
+          padding: '7px 14px', textAlign: 'center',
+          background: 'var(--navy)', color: '#fff',
+          fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 12,
+        }}>
+          {conflictNotice} — refresh to see the latest
+        </div>
+      )}
 
       {showDatePicker && (
         <DateRangePicker existingPlan={plan} onStart={handleStartPlan} />

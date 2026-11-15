@@ -942,7 +942,7 @@ function MemberChip({ m, onClick, disabled, suffix, highlight }) {
   );
 }
 
-function CompletionSheet({ chore, members, bonusMult = 1, onComplete, onAddMember, onClose }) {
+function CompletionSheet({ chore, members, bonusMult = 1, onComplete, onAddMember, onClose, canAddMember = false }) {
   const [selected, setSelected] = React.useState([]);
   const total = chorePoints(chore) * bonusMult;
   const each = splitPoints(total, selected.length || 1);
@@ -964,7 +964,9 @@ function CompletionSheet({ chore, members, bonusMult = 1, onComplete, onAddMembe
         {members.map(m => (
           <MemberChip key={m.id} m={m} highlight={selected.includes(m.id)} onClick={() => toggle(m.id)} />
         ))}
-        <button onClick={handleAdd} style={{ ...smallBtn, border: '1px dashed var(--ink-2)', color: 'var(--ink-2)' }}>＋ Add person</button>
+        {canAddMember && (
+          <button onClick={handleAdd} style={{ ...smallBtn, border: '1px dashed var(--ink-2)', color: 'var(--ink-2)' }}>＋ Add person</button>
+        )}
       </div>
       {selected.length > 0 && (
         <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>
@@ -1294,6 +1296,7 @@ function ChoresApp() {
   function flash(msg) { setToast(msg); setTimeout(() => setToast(t => (t === msg ? '' : t)), 2400); }
 
   function addMember(name) {
+    if (!amAdmin) return null;
     const used = new Set(members.map(m => m.colorId));
     const nextColor = (FAMILY_COLORS.find(c => !used.has(c.id)) || FAMILY_COLORS[members.length % FAMILY_COLORS.length]).id;
     const nm = { id: generateId(), name: name.trim(), colorId: nextColor, linkedUid: null };
@@ -1485,7 +1488,7 @@ function ChoresApp() {
         <ChoreSheet chore={sheet} onSave={handleSave} onDelete={handleDelete} onClose={() => setSheet(null)} />
       )}
       {dataOpen && <DataSheet chores={chores} onImport={handleImport} onClose={() => setDataOpen(false)} />}
-      {completing && <CompletionSheet chore={completing} members={members} bonusMult={bonusMult} onComplete={handleComplete} onAddMember={addMember} onClose={() => setCompleting(null)} />}
+      {completing && <CompletionSheet chore={completing} members={members} bonusMult={bonusMult} onComplete={handleComplete} onAddMember={addMember} canAddMember={amAdmin} onClose={() => setCompleting(null)} />}
       {redeeming && <RedeemSheet reward={redeeming} members={members} ledger={ledger} onRedeem={handleRedeem} onClose={() => setRedeeming(null)} />}
       {rewardEdit && <RewardEditSheet reward={rewardEdit} onSave={saveReward} onDelete={deleteReward} onClose={() => setRewardEdit(null)} />}
       {adjusting && <AdjustSheet member={adjusting} onAdjust={handleAdjust} onClose={() => setAdjusting(null)} />}
