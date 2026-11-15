@@ -286,7 +286,7 @@ function BottomTabBar({ active = 'home', onTabChange }) {
     <div style={{
       position: 'sticky', bottom: 0,
       display: 'flex', justifyContent: 'space-around',
-      padding: '10px 8px 18px',
+      padding: '10px 8px max(18px, calc(10px + env(safe-area-inset-bottom)))',
       borderTop: '1.5px solid var(--rule-soft)',
       background: 'var(--paper)',
       zIndex: 20,
