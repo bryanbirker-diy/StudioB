@@ -67,6 +67,12 @@
       color: var(--accent-ink);
       box-shadow: none;
     }
+    /* Four pill tabs at 15px/side padding overflow a narrow phone screen
+       (iPhone SE/mini-width) — tighten padding/gap so all four fit. */
+    @media (max-width: 420px) {
+      .bottom-nav { gap: 3px; }
+      .bottom-tab { padding: 7px 6px; gap: 3px; }
+    }
 
     /* ── Page layout ─────────────────────────────────────────── */
     .page {
