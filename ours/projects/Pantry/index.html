@@ -44,7 +44,7 @@
       background: var(--paper);
       border-top: 1px solid var(--rule);
       display: flex; justify-content: center; gap: 6px;
-      padding: 8px 12px;
+      padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
       padding-bottom: max(14px, env(safe-area-inset-bottom));
     }
     .bottom-tab {
