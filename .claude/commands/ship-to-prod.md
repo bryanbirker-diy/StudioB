@@ -22,7 +22,8 @@ If the diff touches any same-origin app file under `ours/` (`.jsx`, `.js`, `.css
 - Push the current branch if not already pushed.
 - If no open PR exists for this branch, create one (`gh pr create`) with a clear title/summary and a test plan.
 - If a PR already exists, report its URL and status instead of creating a duplicate.
-- Check CI status on the PR (`gh pr checks`). If checks are red or pending, tell the user and ask whether to wait, fix, or proceed anyway — never merge on failing checks without explicit override.
+- **No CI runs on pull requests in this repo.** `deploy-ours.yml` triggers only `on: push: branches: [main, FeatureA]` — there is no `pull_request` trigger, so `gh pr checks` / `statusCheckRollup` will stay empty no matter how long you wait on an open PR. Don't poll for PR checks or tell the user you're "waiting on CI" pre-merge; the smoke suite only runs after merge, as the deploy gate (step 3). If the repo's workflows ever gain a `pull_request` trigger, this changes and checks should be read normally.
+- Check mergeability instead: `gh pr view <n> --json mergeable,mergeStateStatus`. If it's `CONFLICTING`/`DIRTY` — e.g. another branch merged a change touching the same files first — tell the user plainly what collided (diff the competing commit against the common ancestor so you can describe the substance, not just the file name), and ask how to resolve before merging: rebase onto `main` and reconcile (favoring whichever side the user confirms is still correct), or stand down if their change already landed another way. Never resolve a substantive conflict silently in one direction without the user's say-so. After rebasing and force-pushing, re-check `mergeable` — GitHub's cache can take a few seconds to recompute after a push.
 
 ## 2. Merge
 
@@ -52,7 +53,7 @@ The CI smoke suite already ran pre-deploy as a gate. After deploy succeeds, do a
 ## Ground rules throughout
 
 - Never skip the Gate step, even if the user seems in a hurry — restate what's shipping and get an explicit yes first.
-- Never merge with red/pending CI without an explicit override from the user.
-- Never force-push to `main` or `gh-pages`.
+- Never merge a `CONFLICTING` PR, and never merge with red/pending checks on a repo whose workflows do trigger on `pull_request`, without an explicit override from the user.
+- Never force-push to `main` or `gh-pages`. Force-pushing the feature branch itself (after a rebase you've already confirmed with the user) is fine.
 - If anything in steps 1–5 fails, stop, explain what failed and why, and ask how to proceed rather than guessing or retrying blindly.
 - Keep the user posted at each phase transition (PR → Merge → Deploy → Smoke → Validation) with a short status line, not just at the end.
