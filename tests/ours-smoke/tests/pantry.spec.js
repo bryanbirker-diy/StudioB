@@ -11,9 +11,8 @@ test.describe('Our Pantry — weekly workflow', () => {
     const errors = trackUnexpectedConsoleErrors(page);
     await freshDevSession(page, '/projects/Pantry/');
 
-    // ── Plan: no plan yet → date range picker ──
+    // ── Plan: no plan yet → days slider (defaults to 7) ──
     await expect(page.getByText('Plan a stretch.', { exact: true })).toBeVisible();
-    await page.getByText('1 week', { exact: true }).click();
     await page.getByRole('button', { name: /build our calendar/i }).click();
 
     await expect(page.getByText(/meals filled/i)).toBeVisible();
@@ -67,7 +66,6 @@ test.describe('Our Pantry — weekly workflow', () => {
 
   test('starting a new plan clears the calendar but keeps saved recipes', async ({ page }) => {
     await freshDevSession(page, '/projects/Pantry/');
-    await page.getByText('1 week', { exact: true }).click();
     await page.getByRole('button', { name: /build our calendar/i }).click();
 
     await page.getByRole('button', { name: 'Start new plan' }).click();
