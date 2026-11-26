@@ -188,31 +188,26 @@ function CalendarMiniPreview({ start, end }) {
 }
 
 // ── DateRangePicker ───────────────────────────────────────────
+// PANTRY-PLN-001: day count is chosen with a slider (1-15 days), not a
+// calendar range — the start date stays editable only as a reference anchor.
+const PLAN_DAYS_MIN = 1;
+const PLAN_DAYS_MAX = 15;
+
 function DateRangePicker({ onStart, existingPlan }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [start, setStart]           = React.useState(existingPlan ? existingPlan.start_date : today);
-  const [end,   setEnd]             = React.useState(existingPlan ? existingPlan.end_date   : '');
-  const [error, setError]           = React.useState('');
+  const existingDays = existingPlan ? daysBetween(existingPlan.start_date, existingPlan.end_date) : 7;
+  const [start, setStart]             = React.useState(existingPlan ? existingPlan.start_date : today);
+  const [days,  setDays]              = React.useState(existingDays);
   const [showConfirm, setShowConfirm] = React.useState(false);
 
-  function setQuick(days) {
-    const s = new Date(today + 'T00:00:00');
+  const end = React.useMemo(() => {
+    const s = new Date(start + 'T00:00:00');
     const e = new Date(s);
     e.setDate(s.getDate() + days - 1);
-    setStart(s.toISOString().slice(0, 10));
-    setEnd(e.toISOString().slice(0, 10));
-    setError('');
-  }
-
-  const numDays = React.useMemo(() => {
-    if (!start || !end || end < start) return null;
-    return daysBetween(start, end);
-  }, [start, end]);
+    return e.toISOString().slice(0, 10);
+  }, [start, days]);
 
   function tryStart() {
-    if (!start || !end)  { setError('Pick a start and end date.'); return; }
-    if (end < start)     { setError('End date must be after start.'); return; }
-    setError('');
     if (existingPlan) { setShowConfirm(true); } else { onStart(start, end); }
   }
 
@@ -222,39 +217,28 @@ function DateRangePicker({ onStart, existingPlan }) {
         Plan a stretch.
       </div>
       <div style={{ fontFamily: 'var(--pen)', fontSize: 15, color: 'var(--ink-soft)', marginBottom: 22, lineHeight: 1.4 }}>
-        Pick a range. We'll build the calendar.
+        Slide to pick how many days. We'll build the calendar.
       </div>
 
       <DateField label="Start" value={start}
-        onChange={e => { setStart(e.target.value); setError(''); }} />
-      <DateField label="End" value={end} min={start}
-        onChange={e => { setEnd(e.target.value); setError(''); }} />
+        onChange={e => setStart(e.target.value)} />
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2, marginBottom: 4 }}>
-        {[[7,'1 week'],[3,'3 days'],[14,'2 weeks']].map(([d, label]) => (
-          <button key={d}
-            className={`chip${numDays === d ? ' chip-brown' : ''}`}
-            style={{ cursor: 'pointer', padding: '4px 13px', fontSize: 12 }}
-            onClick={() => setQuick(d)}>
-            {label}
-          </button>
-        ))}
-        <button className="chip"
-          style={{ cursor: 'pointer', padding: '4px 13px', fontSize: 12, borderStyle: 'dashed' }}
-          onClick={() => { setStart(today); setEnd(''); }}>
-          custom
-        </button>
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--ink-fade)' }}>
+            Days
+          </div>
+          <div style={{ fontFamily: 'var(--pen)', fontSize: 20, color: 'var(--ink)' }}>
+            {days} day{days !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <input type="range" min={PLAN_DAYS_MIN} max={PLAN_DAYS_MAX} value={days}
+          onChange={e => setDays(Number(e.target.value))}
+          style={{ width: '100%' }} />
       </div>
 
-      {error && (
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--terracotta)', marginTop: 6 }}>
-          {error}
-        </div>
-      )}
-
-      {start && end && end >= start && (
-        <CalendarMiniPreview start={start} end={end} />
-      )}
+      <CalendarMiniPreview start={start} end={end} />
 
       <button className="btn btn-clay btn-lg"
         style={{ width: '100%', justifyContent: 'center', marginTop: 20, fontSize: 15 }}
