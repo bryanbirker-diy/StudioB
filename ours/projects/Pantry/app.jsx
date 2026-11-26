@@ -189,9 +189,18 @@ function CalendarMiniPreview({ start, end }) {
 
 // ── DateRangePicker ───────────────────────────────────────────
 // PANTRY-PLN-001: day count is chosen with a slider (1-15 days), not a
-// calendar range — the start date stays editable only as a reference anchor.
+// calendar range. The start date also slides — moving the start slider
+// from the left shifts the start date away from today — with the date
+// field remaining only as a reference display of the result.
 const PLAN_DAYS_MIN = 1;
 const PLAN_DAYS_MAX = 15;
+const START_OFFSET_MAX = 60;
+
+function addDaysIso(iso, n) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 function DateRangePicker({ onStart, existingPlan }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -199,6 +208,8 @@ function DateRangePicker({ onStart, existingPlan }) {
   const [start, setStart]             = React.useState(existingPlan ? existingPlan.start_date : today);
   const [days,  setDays]              = React.useState(existingDays);
   const [showConfirm, setShowConfirm] = React.useState(false);
+
+  const startOffset = Math.min(START_OFFSET_MAX, Math.max(0, daysBetween(today, start) - 1));
 
   const end = React.useMemo(() => {
     const s = new Date(start + 'T00:00:00');
@@ -220,7 +231,22 @@ function DateRangePicker({ onStart, existingPlan }) {
         Slide to pick how many days. We'll build the calendar.
       </div>
 
-      <DateField label="Start" value={start}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--ink-fade)' }}>
+            Start
+          </div>
+          <div style={{ fontFamily: 'var(--pen)', fontSize: 15, color: 'var(--ink)' }}>
+            {fmtDateDisplay(start)}
+          </div>
+        </div>
+        <input type="range" min={0} max={START_OFFSET_MAX} value={startOffset}
+          onChange={e => setStart(addDaysIso(today, Number(e.target.value)))}
+          style={{ width: '100%' }} />
+      </div>
+
+      <DateField label="Start (for reference)" value={start}
         onChange={e => setStart(e.target.value)} />
 
       <div style={{ marginBottom: 12 }}>
