@@ -83,45 +83,6 @@ function fmtDateDisplay(iso) {
   return `${DOW_SHORT[dow]} · ${MON_SHORT[m-1]} ${d}`;
 }
 
-function DateField({ label, value, onChange, min }) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.1em',
-        textTransform: 'uppercase', color: 'var(--ink-fade)', marginBottom: 5 }}>
-        {label}
-      </div>
-      <div style={{ position: 'relative' }}>
-        <div style={{
-          border: '1px solid var(--rule)',
-          borderRadius: 0,
-          padding: '11px 14px',
-          background: 'var(--card)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontFamily: 'var(--pen)', fontSize: 15,
-          color: value ? 'var(--ink)' : 'var(--ink-fade)',
-          pointerEvents: 'none', userSelect: 'none',
-        }}>
-          <span>{value ? fmtDateDisplay(value) : 'Pick a date…'}</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.4, flexShrink: 0 }}>
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </div>
-        <input type="date" value={value} min={min} onChange={onChange}
-          style={{
-            position: 'absolute', inset: 0, opacity: 0,
-            cursor: 'pointer', width: '100%', height: '100%',
-            fontSize: 16,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
 // ── CalendarMiniPreview ────────────────────────────────────────
 function CalendarMiniPreview({ start, end }) {
   const s = new Date(start + 'T00:00:00');
@@ -188,18 +149,14 @@ function CalendarMiniPreview({ start, end }) {
 }
 
 // ── DateRangePicker ───────────────────────────────────────────
-// PANTRY-PLN-001: a two-day-minimum, 15-day-maximum window chosen with two
-// sliders acting as the left/right handles of one range — dragging the
-// right (Days) handle moves the end date and leaves the start alone;
-// dragging the left (Start) handle moves the start date and leaves the
-// end alone, narrowing or widening the window. Neither handle can cross
-// the other or push the window outside [2, 15] days, and the start can
-// never reach into the past. The date field is a reference display of
-// the result, but editing it drives the same start-handle logic.
-const PLAN_DAYS_MIN = 2;
+// PANTRY-PLN-002: a single track with two handles — the left handle is the
+// start date, the right handle is the end date. The track's left edge is
+// today and its right edge is today + WINDOW_MAX days; each step is one
+// calendar day. There is no separate start slider, days slider, or
+// date-entry field — the day count below the track is a display only.
+const PLAN_DAYS_MIN = 1;
 const PLAN_DAYS_MAX = 15;
-const START_OFFSET_MAX = 60;
-const KEYBOARD_BIG_STEP = 7;
+const WINDOW_MAX = 74; // today .. today+74, enough room for a 60-day-out start plus a 15-day stretch
 
 function addDaysIso(iso, n) {
   const d = new Date(iso + 'T00:00:00');
@@ -207,59 +164,36 @@ function addDaysIso(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 
-function clampInt(v, lo, hi) {
-  return Math.min(hi, Math.max(lo, v));
-}
-
 function DateRangePicker({ onStart, existingPlan }) {
   const today = new Date().toISOString().slice(0, 10);
-  const initialStartOffset = existingPlan
-    ? clampInt(daysBetween(today, existingPlan.start_date) - 1, 0, START_OFFSET_MAX)
-    : 0;
-  const initialDays = existingPlan
-    ? clampInt(daysBetween(existingPlan.start_date, existingPlan.end_date), PLAN_DAYS_MIN, PLAN_DAYS_MAX)
-    : 7;
-  const [startOffset, setStartOffsetRaw] = React.useState(initialStartOffset);
-  const [endOffset,   setEndOffsetRaw]   = React.useState(initialStartOffset + initialDays - 1);
-  const [showConfirm, setShowConfirm]    = React.useState(false);
+  const existingDays = existingPlan ? daysBetween(existingPlan.start_date, existingPlan.end_date) : 7;
+  const initStartOffset = existingPlan ? Math.max(0, daysBetween(today, existingPlan.start_date) - 1) : 0;
+  const initEndOffset   = Math.min(WINDOW_MAX, initStartOffset + existingDays - 1);
 
-  const start = addDaysIso(today, startOffset);
-  const end   = addDaysIso(today, endOffset);
-  const days  = endOffset - startOffset + 1;
+  const [startOffset, setStartOffset] = React.useState(initStartOffset);
+  const [endOffset,   setEndOffset]   = React.useState(initEndOffset);
+  const [showConfirm, setShowConfirm] = React.useState(false);
 
-  // AC6/AC7: the start handle can't cross the end handle, can't push the
-  // window outside [2, 15] days, and can't move into the past.
-  const startMin = Math.max(0, endOffset - (PLAN_DAYS_MAX - 1));
-  const startMax = Math.min(START_OFFSET_MAX, endOffset - (PLAN_DAYS_MIN - 1));
-  // The days handle only needs the fixed [2, 15] bounds — the start stays put.
-  const daysMin = PLAN_DAYS_MIN;
-  const daysMax = PLAN_DAYS_MAX;
+  const start    = addDaysIso(today, startOffset);
+  const end      = addDaysIso(today, endOffset);
+  const dayCount = endOffset - startOffset + 1;
 
-  function setStartOffset(v) {
-    setStartOffsetRaw(clampInt(v, startMin, startMax));
-  }
-  function setDays(v) {
-    const clamped = clampInt(v, daysMin, daysMax);
-    setEndOffsetRaw(startOffset + clamped - 1);
-  }
-  function setStartFromDate(iso) {
-    setStartOffset(daysBetween(today, iso) - 1);
+  function changeStart(v) {
+    const next = Math.max(0, Math.min(v, endOffset, endOffset - (PLAN_DAYS_MIN - 1)));
+    setStartOffset(Math.max(next, endOffset - (PLAN_DAYS_MAX - 1)));
   }
 
-  // AC8: arrow keys move a handle one day; Shift+arrow moves it a week,
-  // still clamped to the same limits as a drag. Home/End already reach
-  // the furthest allowed position natively, since min/max above track
-  // the live constraint.
-  function handleBigStep(e, current, setter) {
-    if (!e.shiftKey) return;
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    e.preventDefault();
-    setter(current + (e.key === 'ArrowLeft' ? -KEYBOARD_BIG_STEP : KEYBOARD_BIG_STEP));
+  function changeEnd(v) {
+    const next = Math.min(WINDOW_MAX, Math.max(v, startOffset, startOffset + (PLAN_DAYS_MIN - 1)));
+    setEndOffset(Math.min(next, startOffset + (PLAN_DAYS_MAX - 1)));
   }
 
   function tryStart() {
     if (existingPlan) { setShowConfirm(true); } else { onStart(start, end); }
   }
+
+  const startPct = (startOffset / WINDOW_MAX) * 100;
+  const endPct   = (endOffset   / WINDOW_MAX) * 100;
 
   return (
     <div style={{ maxWidth: 420, margin: '0 auto', padding: '28px 20px 48px' }}>
@@ -267,42 +201,57 @@ function DateRangePicker({ onStart, existingPlan }) {
         Plan a stretch.
       </div>
       <div style={{ fontFamily: 'var(--pen)', fontSize: 15, color: 'var(--ink-soft)', marginBottom: 22, lineHeight: 1.4 }}>
-        Slide to pick how many days. We'll build the calendar.
+        Drag either end to pick your dates. We'll build the calendar.
       </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--ink-fade)' }}>
-            Start
-          </div>
-          <div style={{ fontFamily: 'var(--pen)', fontSize: 15, color: 'var(--ink)' }}>
-            {fmtDateDisplay(start)}
-          </div>
+      <style>{`
+        .dual-range-track input[type=range] {
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%; margin: 0;
+          -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none;
+        }
+        .dual-range-track input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none; pointer-events: auto; width: 22px; height: 22px; border-radius: 50%;
+          background: var(--clay); border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: grab;
+        }
+        .dual-range-track input[type=range]::-moz-range-thumb {
+          pointer-events: auto; width: 22px; height: 22px; border-radius: 50%;
+          background: var(--clay); border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: grab;
+        }
+        .dual-range-track input[type=range]::-webkit-slider-runnable-track { -webkit-appearance: none; background: transparent; }
+        .dual-range-track input[type=range]::-moz-range-track { background: transparent; }
+      `}</style>
+
+      <div style={{ position: 'relative', height: 30, marginTop: 34, marginBottom: 2 }}>
+        <div style={{
+          position: 'absolute', top: -26, left: `${startPct}%`, transform: 'translateX(-50%)',
+          fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-soft)', whiteSpace: 'nowrap',
+        }}>{fmtDateDisplay(start)}</div>
+        <div style={{
+          position: 'absolute', top: -26, left: `${endPct}%`, transform: 'translateX(-50%)',
+          fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-soft)', whiteSpace: 'nowrap',
+        }}>{fmtDateDisplay(end)}</div>
+
+        <div style={{
+          position: 'absolute', top: '50%', left: 0, right: 0, height: 4,
+          transform: 'translateY(-50%)', background: 'var(--rule)',
+        }} />
+        <div style={{
+          position: 'absolute', top: '50%', height: 4, transform: 'translateY(-50%)',
+          left: `${startPct}%`, width: `${endPct - startPct}%`, background: 'var(--clay)',
+        }} />
+
+        <div className="dual-range-track" style={{ position: 'absolute', inset: 0 }}>
+          <input type="range" min={0} max={WINDOW_MAX} value={startOffset}
+            onChange={e => changeStart(Number(e.target.value))}
+            aria-label="Start date" style={{ zIndex: 3 }} />
+          <input type="range" min={0} max={WINDOW_MAX} value={endOffset}
+            onChange={e => changeEnd(Number(e.target.value))}
+            aria-label="End date" style={{ zIndex: 4 }} />
         </div>
-        <input type="range" min={startMin} max={startMax} value={startOffset}
-          onChange={e => setStartOffset(Number(e.target.value))}
-          onKeyDown={e => handleBigStep(e, startOffset, setStartOffset)}
-          style={{ width: '100%' }} />
       </div>
 
-      <DateField label="Start (for reference)" value={start}
-        onChange={e => setStartFromDate(e.target.value)} />
-
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--ink-fade)' }}>
-            Days
-          </div>
-          <div style={{ fontFamily: 'var(--pen)', fontSize: 20, color: 'var(--ink)' }}>
-            {days} day{days !== 1 ? 's' : ''}
-          </div>
-        </div>
-        <input type="range" min={daysMin} max={daysMax} value={days}
-          onChange={e => setDays(Number(e.target.value))}
-          onKeyDown={e => handleBigStep(e, days, setDays)}
-          style={{ width: '100%' }} />
+      <div style={{ fontFamily: 'var(--pen)', fontSize: 20, color: 'var(--ink)', textAlign: 'center', marginBottom: 4 }}>
+        {dayCount} day{dayCount !== 1 ? 's' : ''}
       </div>
 
       <CalendarMiniPreview start={start} end={end} />
