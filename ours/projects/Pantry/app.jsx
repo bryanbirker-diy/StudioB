@@ -188,13 +188,18 @@ function CalendarMiniPreview({ start, end }) {
 }
 
 // ── DateRangePicker ───────────────────────────────────────────
-// PANTRY-PLN-001: day count is chosen with a slider (1-15 days), not a
-// calendar range. The start date also slides — moving the start slider
-// from the left shifts the start date away from today — with the date
-// field remaining only as a reference display of the result.
-const PLAN_DAYS_MIN = 1;
+// PANTRY-PLN-001: a two-day-minimum, 15-day-maximum window chosen with two
+// sliders acting as the left/right handles of one range — dragging the
+// right (Days) handle moves the end date and leaves the start alone;
+// dragging the left (Start) handle moves the start date and leaves the
+// end alone, narrowing or widening the window. Neither handle can cross
+// the other or push the window outside [2, 15] days, and the start can
+// never reach into the past. The date field is a reference display of
+// the result, but editing it drives the same start-handle logic.
+const PLAN_DAYS_MIN = 2;
 const PLAN_DAYS_MAX = 15;
 const START_OFFSET_MAX = 60;
+const KEYBOARD_BIG_STEP = 7;
 
 function addDaysIso(iso, n) {
   const d = new Date(iso + 'T00:00:00');
@@ -202,21 +207,55 @@ function addDaysIso(iso, n) {
   return d.toISOString().slice(0, 10);
 }
 
+function clampInt(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
 function DateRangePicker({ onStart, existingPlan }) {
   const today = new Date().toISOString().slice(0, 10);
-  const existingDays = existingPlan ? daysBetween(existingPlan.start_date, existingPlan.end_date) : 7;
-  const [start, setStart]             = React.useState(existingPlan ? existingPlan.start_date : today);
-  const [days,  setDays]              = React.useState(existingDays);
-  const [showConfirm, setShowConfirm] = React.useState(false);
+  const initialStartOffset = existingPlan
+    ? clampInt(daysBetween(today, existingPlan.start_date) - 1, 0, START_OFFSET_MAX)
+    : 0;
+  const initialDays = existingPlan
+    ? clampInt(daysBetween(existingPlan.start_date, existingPlan.end_date), PLAN_DAYS_MIN, PLAN_DAYS_MAX)
+    : 7;
+  const [startOffset, setStartOffsetRaw] = React.useState(initialStartOffset);
+  const [endOffset,   setEndOffsetRaw]   = React.useState(initialStartOffset + initialDays - 1);
+  const [showConfirm, setShowConfirm]    = React.useState(false);
 
-  const startOffset = Math.min(START_OFFSET_MAX, Math.max(0, daysBetween(today, start) - 1));
+  const start = addDaysIso(today, startOffset);
+  const end   = addDaysIso(today, endOffset);
+  const days  = endOffset - startOffset + 1;
 
-  const end = React.useMemo(() => {
-    const s = new Date(start + 'T00:00:00');
-    const e = new Date(s);
-    e.setDate(s.getDate() + days - 1);
-    return e.toISOString().slice(0, 10);
-  }, [start, days]);
+  // AC6/AC7: the start handle can't cross the end handle, can't push the
+  // window outside [2, 15] days, and can't move into the past.
+  const startMin = Math.max(0, endOffset - (PLAN_DAYS_MAX - 1));
+  const startMax = Math.min(START_OFFSET_MAX, endOffset - (PLAN_DAYS_MIN - 1));
+  // The days handle only needs the fixed [2, 15] bounds — the start stays put.
+  const daysMin = PLAN_DAYS_MIN;
+  const daysMax = PLAN_DAYS_MAX;
+
+  function setStartOffset(v) {
+    setStartOffsetRaw(clampInt(v, startMin, startMax));
+  }
+  function setDays(v) {
+    const clamped = clampInt(v, daysMin, daysMax);
+    setEndOffsetRaw(startOffset + clamped - 1);
+  }
+  function setStartFromDate(iso) {
+    setStartOffset(daysBetween(today, iso) - 1);
+  }
+
+  // AC8: arrow keys move a handle one day; Shift+arrow moves it a week,
+  // still clamped to the same limits as a drag. Home/End already reach
+  // the furthest allowed position natively, since min/max above track
+  // the live constraint.
+  function handleBigStep(e, current, setter) {
+    if (!e.shiftKey) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    setter(current + (e.key === 'ArrowLeft' ? -KEYBOARD_BIG_STEP : KEYBOARD_BIG_STEP));
+  }
 
   function tryStart() {
     if (existingPlan) { setShowConfirm(true); } else { onStart(start, end); }
@@ -241,13 +280,14 @@ function DateRangePicker({ onStart, existingPlan }) {
             {fmtDateDisplay(start)}
           </div>
         </div>
-        <input type="range" min={0} max={START_OFFSET_MAX} value={startOffset}
-          onChange={e => setStart(addDaysIso(today, Number(e.target.value)))}
+        <input type="range" min={startMin} max={startMax} value={startOffset}
+          onChange={e => setStartOffset(Number(e.target.value))}
+          onKeyDown={e => handleBigStep(e, startOffset, setStartOffset)}
           style={{ width: '100%' }} />
       </div>
 
       <DateField label="Start (for reference)" value={start}
-        onChange={e => setStart(e.target.value)} />
+        onChange={e => setStartFromDate(e.target.value)} />
 
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -259,8 +299,9 @@ function DateRangePicker({ onStart, existingPlan }) {
             {days} day{days !== 1 ? 's' : ''}
           </div>
         </div>
-        <input type="range" min={PLAN_DAYS_MIN} max={PLAN_DAYS_MAX} value={days}
+        <input type="range" min={daysMin} max={daysMax} value={days}
           onChange={e => setDays(Number(e.target.value))}
+          onKeyDown={e => handleBigStep(e, days, setDays)}
           style={{ width: '100%' }} />
       </div>
 
